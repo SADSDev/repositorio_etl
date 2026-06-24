@@ -68,9 +68,9 @@ async def fullfillment_pedidos(new_page, fecha_hoy):
 
     download = await download_info.value
     download_path = await download.path() #espera a que se complete la descarga
-    #cerrar ui-window-bar
+    #cerrar ui-window-bar para los siguientes reportes
     await new_page.wait_for_timeout(1000)
-    await new_page.locator('.ui-window-bar .ui-window-button-close').click()#ya está visible desde que se ejecutó la descarga, no es necesario esperarlo
+    await new_page.locator('.ui-window-bar .ui-window-button-close').click()
 
      
     # Crear archivo temporal y copiar contenido allí

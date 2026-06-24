@@ -74,7 +74,11 @@ async def ito_detallado(new_page, fecha_hoy):
     async with new_page.expect_download(timeout=240000) as download_info:
         download = await download_info.value
         download_path = await download.path()
-     
+    
+    #cerrar ui-window-bar para los siguientes reportes
+    await new_page.wait_for_timeout(1000)
+    await new_page.locator('.ui-window-bar .ui-window-button-close').click()
+
     # Crear archivo temporal y copiar contenido allí
     temp_fd, temp_path = tempfile.mkstemp(suffix=".xlsx")
     os.close(temp_fd)  # Cerrar el descriptor de archivo

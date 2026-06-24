@@ -21,7 +21,7 @@ async def ito_consolidado(new_page, fecha_hoy):
     #Esperar a que aparezca la barra de búsqueda 
     await new_page.locator('input.search-box-text').wait_for(state='visible')
     #Escribir el nombre del reporte
-    await new_page.locator('input.search-box-text').fill("Reporte Cobertura ITO % Geocerca Detalle")
+    await new_page.locator('input.search-box-text').fill("Reporte Consolidado Cobertura ITO % Geocerca")
     #Esperar que aparezcan resultados en el contenedor
     await new_page.locator('div.search-box-results').wait_for(state='visible')
     #Dar clic al primer resultado con tabindex="0"
@@ -47,7 +47,7 @@ async def ito_consolidado(new_page, fecha_hoy):
 
     await new_page.fill('input[id$="__variable_3_element"]', "")
     await new_page.fill('input[id$="__variable_3_element"]', "8")
-    
+    await new_page.wait_for_timeout(1500)
     await new_page.fill('input[id$="__variable_4_element"]', "")
     await new_page.fill('input[id$="__variable_4_element"]', str(fecha_hoy))
     
@@ -74,6 +74,10 @@ async def ito_consolidado(new_page, fecha_hoy):
         download = await download_info.value
         download_path = await download.path()
      
+    #cerrar ui-window-bar para los siguientes reportes
+    await new_page.wait_for_timeout(1000)
+    await new_page.locator('.ui-window-bar .ui-window-button-close').click()
+
     # Crear archivo temporal y copiar contenido allí
     temp_fd, temp_path = tempfile.mkstemp(suffix=".xlsx")
     os.close(temp_fd)  # Cerrar el descriptor de archivo
