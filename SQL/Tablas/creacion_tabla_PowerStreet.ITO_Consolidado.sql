@@ -1,8 +1,7 @@
-CREATE TABLE PowerStreet.ITO_Geocerca_Detalle
-(
+CREATE TABLE PowerStreet.ITO_Consolidado
+(   
     Agencia                                 VARCHAR(200) NOT NULL,
     Fecha                                   DATE NOT NULL,
-    NUR                                     VARCHAR(20) NOT NULL,
     Ruta                                    VARCHAR(5) NOT NULL,
 
     Visitas_Geocerca                        INT NOT NULL,

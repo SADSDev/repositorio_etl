@@ -16,7 +16,9 @@ from procesos.db_cliente import dbcliente
 from procesos.tiempos_y_movimientos import tiempos
 from procesos.cp import cp
 from procesos.combos import combos
-
+from procesos.fullfillment_pedidos_pmm import fullfillment_pedidos
+from procesos.ito_consolidado import ito_consolidado
+from procesos.ito_detallado import ito_detallado
 #-----------------------------------
 #PROCESO
 #-----------------------------------
@@ -47,6 +49,14 @@ async def main(fecha_hoy):
             print("ejecutando combos...")
             await combos(new_page, fecha_hoy)
 
+            print("ejecuntando pedidos pmm...")
+            await fullfillment_pedidos(new_page, fecha_hoy)
+
+            print("ejecutando ito consolidado...")
+            await ito_consolidado(new_page, fecha_hoy)
+
+            print("ejecutando ito detallado...")
+            await ito_detallado(new_page, fecha_hoy)
         finally:
 
             await browser.close()

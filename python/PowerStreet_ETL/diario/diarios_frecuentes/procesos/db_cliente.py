@@ -21,7 +21,6 @@ from configuraciones.parametros import (
 #----------------
 async def dbcliente(new_page, fecha_hoy):    
     #Ahora si, conseguir reportes:
-    #tiempos y movimientos---------------------------------------------
     #abriendo busqueda rápida y buscandolo manualmente
     print("obteniendo reporte dbcliente...")
     await new_page.click('div.quicksearch-btn')
