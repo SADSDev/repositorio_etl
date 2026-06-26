@@ -23,3 +23,7 @@ dias = [
     'Lunes', 'Martes', 'Miércoles',
     'Jueves', 'Viernes', 'Sábado', 'Domingo'
 ]
+
+#Agencias a consultar
+desde_agencia=1
+hasta_agencia=9

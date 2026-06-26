@@ -1,6 +1,6 @@
 CREATE TABLE PowerStreet.Fullfilment_Pedidos_PMM
 (
-    Ruta                     VARCHAR(5) NOT NULL,
+    NUR                     VARCHAR(20) NOT NULL,
     Fecha                   DATE NOT NULL,
 
     Vendedor                VARCHAR(20) NOT NULL,

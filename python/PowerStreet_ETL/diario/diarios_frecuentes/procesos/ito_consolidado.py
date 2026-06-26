@@ -10,6 +10,7 @@ from sqlalchemy import text
 #IMPORTS
 #------------------------
 from configuraciones.conexion_sql import motor
+from configuraciones.parametros import (desde_agencia, hasta_agencia)
 
 #-----------------------------
 #PROCESO
@@ -43,10 +44,10 @@ async def ito_consolidado(new_page, fecha_hoy):
     await new_page.wait_for_timeout(1500)
     
     await new_page.fill('input[id$="__variable_2_element"]', "")
-    await new_page.fill('input[id$="__variable_2_element"]', "8")
+    await new_page.fill('input[id$="__variable_2_element"]', str(desde_agencia))
 
     await new_page.fill('input[id$="__variable_3_element"]', "")
-    await new_page.fill('input[id$="__variable_3_element"]', "8")
+    await new_page.fill('input[id$="__variable_3_element"]', str(hasta_agencia))
     await new_page.wait_for_timeout(1500)
     await new_page.fill('input[id$="__variable_4_element"]', "")
     await new_page.fill('input[id$="__variable_4_element"]', str(fecha_hoy))
@@ -98,15 +99,12 @@ async def ito_consolidado(new_page, fecha_hoy):
     
     #TRANSFORMACIÓN DEL DF
     #Eliminar columnas que no se necesitarán
-    itoconsolidado=itoconsolidado.drop(columns=["CLO","Periodo"])
     #COLUMNA CON FECHA DEL DIA DE HOY Y ACOMODARLA DSPUÉS DE AGENCIA
     itoconsolidado['Fecha'] = pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
     columnas=itoconsolidado.columns.to_list()
     indice_agencia= columnas.index('Agencia')
     columnas.insert(indice_agencia + 1,columnas.pop(columnas.index('Fecha')))
     itoconsolidado=itoconsolidado[columnas]
-    #transformar columna nur a ruta
-    itoconsolidado['NUR']="R"+itoconsolidado['NUR'].str[-2:]
     #pasar columnas pct´s a formato de decimal (divdir entre 100)
     cols_pct = [col for col in itoconsolidado.columns if "Pct_" in col]
     itoconsolidado[cols_pct]=itoconsolidado[cols_pct]/100

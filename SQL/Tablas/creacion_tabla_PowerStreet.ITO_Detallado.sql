@@ -1,8 +1,9 @@
 CREATE TABLE PowerStreet.ITO_Detallado
-(
+(   
+    CLO                             INT NOT NULL,
     Agencia                         INT NOT NULL,
-    Ruta                            VARCHAR(5) NOT NULL,
-    Vendedor                        VARCHAR(20) NOT NULL,
+    NUR                            VARCHAR(20) NOT NULL,
+    Vendedor                        VARCHAR(100) NOT NULL,
 
     Fecha                           DATE NOT NULL,
 
@@ -30,7 +31,7 @@ CREATE TABLE PowerStreet.ITO_Detallado
     Visitas_Geocerca                INT NULL,
     Visitas_Totales                 INT NULL,
     Visitas_Programadas             INT NULL,
-    Visitas_Unicas_ITO              INT NOT NULL
+    Visitas_Unicas_ITO              INT NULL
 );
 GO
 

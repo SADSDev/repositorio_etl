@@ -11,6 +11,7 @@ import numpy as np
 #IMPORTS
 #------------------------
 from configuraciones.conexion_sql import motor
+from configuraciones.parametros import (desde_agencia, hasta_agencia)
 
 #-----------------------------
 #PROCESO
@@ -29,7 +30,6 @@ async def ito_detallado(new_page, fecha_hoy):
     #Dar clic al primer resultado con tabindex="0"
     await new_page.locator('div.searchbox-item[tabindex="0"]').click()
     
-
 
     #esperar ventana "propiedades"
     await new_page.wait_for_selector('ui-window[visible="true"]', timeout=30000)
@@ -51,10 +51,10 @@ async def ito_detallado(new_page, fecha_hoy):
     await new_page.wait_for_timeout(1500)
     
     await new_page.fill('input[id$="__variable_4_element"]', "")
-    await new_page.fill('input[id$="__variable_4_element"]', "8")
+    await new_page.fill('input[id$="__variable_4_element"]', str(desde_agencia))
 
     await new_page.fill('input[id$="__variable_5_element"]', "")
-    await new_page.fill('input[id$="__variable_5_element"]', "8")    
+    await new_page.fill('input[id$="__variable_5_element"]', str(hasta_agencia))    
     await new_page.wait_for_timeout(1500)
     #hacer click en boton para ver el reporte
     await new_page.get_by_role("button", name="Ver").click()
@@ -98,14 +98,6 @@ async def ito_detallado(new_page, fecha_hoy):
     print("transformando archivo")
     
     #TRANSFORMACIÓN DEL DF
-    #Eliminar columnas que no se necesitarán
-    itodetallado=itodetallado.drop(columns=["CLO"])
-    #Cambiar la agencia a solo el numero
-    itodetallado['Agencia']=itodetallado['Agencia'].str[:1]
-    #transformar columna nur a ruta
-    itodetallado['NUR']="R"+itodetallado['NUR'].str[-2:]
-    #cambir la columna de vendedor a solo su clave
-    itodetallado['Vendedor']=itodetallado['Vendedor'].str[:4]
     #llenar lacolumna Dia con la fecha de hoy
     itodetallado['Dia'] = pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
     #LLENAR ESPACIOS EN BLANCO Y "SIN VISITA" CON NULLS
