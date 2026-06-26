@@ -1,384 +1,20 @@
-import asyncio
-from playwright.async_api import async_playwright
-import nest_asyncio
-import base64
-import cv2#para limpieza de la imagen
-import numpy as np#viene en python base
-import os
-os.environ["CUDA_VISIBLE_DEVICES"]="-1"
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-os.environ["OMP_NUM_THREADS"]="1"
-os.environ["FLAGS_use_mkldnn"] = "0"
-import ssl
-import certifi
-ssl._create_default_https_context=lambda: ssl.create_default_context(cafile=certifi.where())
-#import easyocr #para leer texto de escaneres o imagenes
-from paddleocr import PaddleOCR
-import pandas as pd
-import csv
+#--------------------
+#LIBRERIAS
+#--------------------
 import tempfile
-import pyodbc
-from datetime import datetime, timedelta
+from pathlib import Path
+import pandas as pd
+import numpy as np
+from sqlalchemy import text
+#------------------------
+#IMPORTS
+#------------------------
+from configuraciones.conexion_sql import motor
+from core.normalizacion_texto import normalizar_texto
 
-#definición de parámetros universales-----------------------------------------------------------------------------------------------------------------------------
-#usuario y contraseña de power street
-usuariops="sodedsros"
-contraseñaps="Eadlrc123#"
-
-#obtener driver odbc sql instalado en automatico--------------
-drivers=[driver for driver in pyodbc.drivers()]#obtiene los drivers instalados en el equipo
-#la lista de abajo sirve como un vector que contiene los drivers
-#más recientes para conexiones a sql, si el equipo tiene instalado
-#alguno de estos, se elegirá el más reciente, sino, se eligirá el que 
-#tenga instalado
-drivers_prefer=["ODBC Driver 18 for SQL Server",
-                "ODBC Driver 17 for SQL Server",
-                "ODBC Driver 13 for SQL Server",
-                "ODBC Driver 12 for SQL Server"]
-# Buscar el primer controlador preferido que esté disponible
-selected_driver = next((driver for driver in drivers_prefer if driver in drivers), None)
-print(f"el driver encontrado que se utilizará es {selected_driver}")
-
-# Si no hay ninguno preferido, buscar cualquier controlador de SQL Server
-if selected_driver is None:
-    print("No se encontró ninguno de los drivers preferidos para usar\n"
-          "se buscará cualquiera disponible")
-    selected_driver = next((driver for driver in drivers if "SQL Server" in driver and "ODBC Driver" in driver), None)
-    print(f"el driver encontrado que se utilizará es {selected_driver}")
-    
-if selected_driver is None:
-    print("No se encontró ningún driver para conexión a SQL\n"
-          "No se puede iniciar la ejecución, se terminará el programa")
-    exit()
-
-#crear conexion con el driver escogido:
-from sqlalchemy import create_engine
-#parámetros
-driver = selected_driver
-servidor='187.190.212.112'
-bd='PowerStreet'
-usuario='operacionDZ'
-contraseña='68t9UKhkY!'
-direccion=(f"mssql+pyodbc://{usuario}:{contraseña}@{servidor}:1433/{bd}?driver={driver.replace(' ', '+')}"
-    "&trustServerCertificate=Yes"
-    "&Connection Timeout=30")
-motor=create_engine(direccion,pool_pre_ping=True)
-
-
-#declaración de listas que contienen meses y dias en español------------------
-#lo que pasa es que para obtener los dias y los meses se utilizaba el 
-#comando (locale='es_ES'), pero este solo sirve para equipos con config
-#del sistema operativo en español, si está en cualquier otro idioma
-#no funcionará y necesitamos los resultados en español para la recopilación
-#de los resultados en POwer BI
-meses=[
-       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-       ]
-dias=[
-      'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
-      'Sábado', 'Domingo'
-      ]
-
-
-
-#definición de funciones------------------------------------------------------------------------
-#programa para la obtención de repotes con actualización semanal--------------------------------
-
-
-#definicion de programa base, este sirve como la función base para la apertura
-#de chrome, carga de powerstreet e inicio de sesión y se usará en todos los programas de abajo
-async def carga_pagina(p,usuario_powerstreet, contraseña_powerstreet, headless=True):
-    #bucle pequeño para el intento de carga de página en caso de reseteos de conexión
-    async def safe_goto(page, url, retries=3):
-        for i in range(retries):
-            try:
-                await page.goto(url, wait_until="domcontentloaded", timeout=180000)
-                return#exito, rompe bucle
-            except Exception as e:
-                print(f"Fallo de carga de página en elintento {i}")
-                await page.wait_for_timeout(15000)#espera 15 segundos antes de volver a intentar
-        raise Exception("No se pudo cargar la página")
-    
-    browser = await p.chromium.launch(headless=headless)
-    #contexto del navegador usado, se trata de dejar una huella de navegadores convencionales al hacer conexión
-    context = await browser.new_context(
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120 Safari/537.36",
-        viewport={"width": 1366, "height": 768},
-        locale="es-MX",)
-    page = await context.new_page()
-
-    await safe_goto(page, url="https://client.powerstreet.cloud")
-    await page.wait_for_load_state("networkidle", timeout=240000)
-    print("Página cargada!!!")
-
-    # credenciales
-    await page.fill('input[name="user"]', usuariops)
-    await page.fill('input[name="pass"]', contraseñaps)
-    await page.click('input[value="iniciar sesión"]')
-    await page.locator('[role="dialog"]').wait_for(state="visible")#esperar el modal que contiene el captcha
-    await page.wait_for_timeout(1000)
-    await page.wait_for_load_state("networkidle", timeout=240000)
-
-    
-    dialog=page.locator('[role="dialog"][aria-describedby="captcha-dialog"]')
-    ocr = PaddleOCR(use_textline_orientation=False,lang='en')
-    while await dialog.is_visible():
-        print("resolviendo captcha")
-        image = await page.query_selector('#captcha-img')#selección de la imagen del captcha
-        if image:
-            print("imagen encontrada")
-            await page.locator('#captcha-img').get_attribute('src')
-            captcha_img = page.locator('#captcha-img')
-            await captcha_img.wait_for(state="visible")
-            
-            # Descargar imagen desde el navegador
-            img_base64 = await captcha_img.evaluate("""
-                img => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    return canvas.toDataURL('image/png').split(',')[1];
-                }
-                """)
-            with open("captcha.png", "wb") as f:
-                f.write(base64.b64decode(img_base64))
-  
-            img = cv2.imread("captcha.png")
-            if img is None:
-                print("Imagen vacía")
-                continue
-
-            print("Captcha descargado correctamente")
-            #limpieza de la imagen
-            img = cv2.imread("captcha.png")
-            # Convierte la imagen a escala de grises
-            gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            # Aplicar un umbral para obtener solo los tonos de negro (y gris)
-            _, imagen_umbral = cv2.threshold(
-                gray_img, 150, 255, cv2.THRESH_BINARY_INV)
-            # Crear una imagen en blanco
-            imagen_blanca = np.ones_like(img) * 255
-            # Aplicar la máscara de umbral a la imagen original
-            resultado = cv2.bitwise_and(img, img, mask=imagen_umbral)
-            # Combinar la imagen original con la imagen en blanco usando la máscara inversa
-            imagen_final = cv2.add(imagen_blanca, resultado, mask=cv2.bitwise_not(imagen_umbral))
-            # Aumentar el contraste en un 300%
-            alpha = 4.0  # Factor de contraste (1.0 + 3.0 = 4.0 para +300%)
-            imagen_contraste = cv2.convertScaleAbs(imagen_final, alpha=alpha, beta=0)
-            # Aumentar el brillo en un 150%
-            beta = 150  # Valor de brillo (150 para +150%)
-            imagen_brillo = cv2.convertScaleAbs(imagen_contraste, alpha=1.0, beta=beta)
-            cv2.imwrite("captcha.png", imagen_brillo)
-            resultado = ocr.ocr('captcha.png')
-            if resultado and resultado[0]: #SI EL RESULTADO NO ESTÁ VACIO
-                captchaResult = "".join([linea[1][0] for linea in resultado[0]])
-                print(captchaResult)
-                await page.locator('input[name="captcha-text"]').wait_for(state="visible",timeout=60000)
-                await page.fill('input[name="captcha-text"]', captchaResult)
-                modal = page.locator('[role="dialog"]')#adecuar 
-                await modal.locator('button:has-text("Validar")').click()
-                await page.wait_for_timeout(1500)#esperar 1.5 segundos para que el programa alcanze a hacer la validacion del while    
-            else:
-                print("no se encontró ningun texto en el captcha, volviendo a intentar")
-                await page.locator('#btn-refresh-captcha').click()
-    #continuación después de resolver el captcha
-    #abrir enterprise 
-    async with page.expect_popup() as popup_info:
-        await page.click('text="Enterprise"')
-        
-    new_page = await popup_info.value  # ahora sí tenemos la nueva pestaña con certeza
-    await new_page.wait_for_load_state("networkidle", timeout=240000)
-    print("🔗 URL activa:", new_page.url)
-    
-    #si hay sesiones abiertas se quitan, sino se continua al menú principal
-    boton = await new_page.query_selector('.p-continuebutton')
-    if  boton:
-        print("sesiones abiertas, cerrandolas")
-        await boton.click()
-        await new_page.wait_for_load_state("networkidle", timeout=240000)#espera a cargar el menú principal
-    else:
-        print("Sin sesiones abiertas, continuando")
-    
-    #Ya en el menú principal
-    #cambiar  menú lateral a barra superior
-    await new_page.click('[title="alternar barra de menú"]')
-    
-    return new_page, browser, context
-
-
-#funcion de normalización de textos-----------------------------------------------------------
-import unicodedata
-import re
-def normalizar_texto(s):
-    s = str(s)
-    # Quitar acentos
-    s = unicodedata.normalize('NFKD', s)
-    s = ''.join(c for c in s if not unicodedata.combining(c))
-    # Mayúsculas
-    s = s.upper()
-    # Reemplazar saltos, tabs, espacios raros
-    s = re.sub(r'[\r\n\t]+', ' ', s)
-    # Quitar espacios múltiples
-    s = re.sub(r'\s+', ' ', s)
-    # Quitar espacios al inicio y fin
-    s = s.strip()
-    return s      
-
-
-
-
-#obtener reporte de libros y subirlo a SQL
-async def libros(new_page):
-        
-    #Ahora si, conseguir reportes:
-    #libros---------------------------------------------
-    #abriendo busqueda rápida y buscandolo manualmente
-    print("obteniendo Libro de rutas...")
-    await new_page.click('div.quicksearch-btn')
-    #Esperar a que aparezca la barra de búsqueda (opcional pero recomendable)
-    await new_page.locator('input.search-box-text').wait_for(state='visible')
-    #Escribir el nombre del reporte
-    await new_page.locator('input.search-box-text').fill("Libro de rutas excel")
-    #Esperar que aparezcan resultados en el contenedors
-    await new_page.locator('div.search-box-results').wait_for(state='visible')
-    #Dar clic al primer resultado con tabindex="0"
-    await new_page.locator('div.searchbox-item[tabindex="0"]').click()
-    
-    #esperar ventana "propiedades"
-    await new_page.wait_for_selector('text="Propiedades"', timeout=30000)
-
-    # Esperar que el label de "Agencia" esté presente (más confiable que ID directo)
-    #este es el unico label que hay que esperar, cuando se carga este, todo
-    #lo demás está cargado
-    #nunca se cambia este campo, siempre es el mismo
-    await new_page.wait_for_selector('div:has-text("Distribuidor")')
-    
-    # Llenar campo Agencia (input tipo number)
-    await new_page.fill('input[id$="__variable_3_element"]', "")  # limpiarpiar
-    await new_page.fill('input[id$="__variable_3_element"]', "8")  # valor fijo
-    await new_page.wait_for_timeout(1000)#espera 1 segundo
-    
-    #hacer click en boton para ver el reporte
-    await new_page.get_by_role("button", name="Ver").click()
-    
-    
-    #esperar la ventana del reporte para descargar
-    iframe_element = await new_page.wait_for_selector('iframe[id*="reportView"]')
-    frame = await iframe_element.content_frame()
-    boton = frame.locator('button:has-text("Generar Archivo")')
-    await boton.wait_for(state='visible')
-    await boton.scroll_into_view_if_needed()
-    await boton.hover()    
-    print("datos totalmente cargados, listo para descargar")
-    
-    import shutil
-    from pathlib import Path
-    
-    # Esperar la descarga
-    async with new_page.expect_download(timeout=600_000) as download_info:
-        print("Obteniendo archivo, tardará varios segundos...")
-        await boton.click()
-
-    download = await download_info.value
-
-    #cerrar ui-window-bar
-    await new_page.wait_for_timeout(1000)
-    await new_page.locator('.ui-window-bar .ui-window-button-close').click()#ya está visible desde que se ejecutó la descarga, no es necesario esperarlo
-    
-    # Obtener la ruta del archivo descargado por Playwright
-    download_path = await download.path()
-    print("Archivo descargado en ruta temporal:", download_path)
-    
-    # Copiarlo a un archivo temporal válido con extensión .xls
-    with tempfile.NamedTemporaryFile(suffix=".xls", delete=False) as temp_file:
-        shutil.copy(download_path, temp_file.name)
-        temp_path = temp_file.name  # Guardar ruta para leer después
-    
-    # Leer el archivo con pandas
-    df = pd.read_csv(temp_path, sep='\t', encoding='utf-8')
-    print("Archivo obtenido!!")
-    print(df.head())
-    
-    print("transformando archivo y subiendo archivo")
-    
-    #EL ARCHIVO TIENE UNA COLUMNA ADICIONAL LLAMADA Unnamed: 12, será eliminada
-    df.drop(columns=['Unnamed: 12'], inplace=True)
-    titulos = [str(i) for i in range(len(df.columns))]
-    df.columns=titulos
-    
-    #conectar a SQL y subir datos
-    from sqlalchemy import text
-    df=df.applymap(normalizar_texto)#normalizar texto del df principal
-    #probar que la conexión sea exitosa e insertar datos
-    #también verifica si los datos con la fecha ya existen
-    with motor.begin() as conn:
-        # ✓ Probar conexión
-        result = conn.execute(text("SELECT 1"))
-        print("✅ Conexión exitosa:", result.scalar())
-
-        # ✓ Obtener columnas reales de SQL, EXCLUYENDO LA COLUMNA ID
-        sql_column_query = text("""
-            SELECT COLUMN_NAME 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = 'PowerStreet' 
-            AND TABLE_NAME = 'Libros'
-            AND COLUMNPROPERTY(OBJECT_ID('PowerStreet.Libros'), COLUMN_NAME, 'IsIdentity') = 0
-            ORDER BY ORDINAL_POSITION;
-        """)
-        sql_column_result = conn.execute(sql_column_query).fetchall()
-        sql_columns = [row[0] for row in sql_column_result]
-
-        if len(df.columns) != len(sql_columns):
-            raise ValueError(f"❌ El DataFrame tiene {len(df.columns)} columnas "
-                            f"pero la tabla SQL tiene {len(sql_columns)}.")
-
-        df.columns = sql_columns
-        print("✅ Columnas renombradas correctamente.")
-        conn.execute(text("TRUNCATE TABLE PowerStreet.Libros"))#reiniciar conteo de columna id 
-        # ✓ Insertar datos
-        df.to_sql(
-            name='Libros',
-            con=conn,
-            schema='PowerStreet',
-            if_exists='append',
-            index=False,
-            chunksize=500
-        )
-        print("✅ Datos insertados correctamente.")
-
-        #Eliminar duplicados basándose en Cliente + Orden
-        sql_delete_duplicados = text("""
-            DELETE L
-            FROM PowerStreet.Libros AS L
-            JOIN (
-                SELECT 
-                    Id,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY Cliente, Orden 
-                        ORDER BY Id DESC     
-                    ) AS rn
-                FROM PowerStreet.Libros
-            ) AS x
-                ON L.Id = x.Id
-            WHERE x.rn > 1;
-        """)
-
-        result = conn.execute(sql_delete_duplicados)
-        print(f"✅ Se eliminaron {result.rowcount if result.rowcount != -1 else 'un número desconocido de'} registros duplicados por Cliente.")
-        conn.execute(text("TRUNCATE TABLE PowerStreet.UX"))#reiniciar conteo de columna id      
-    # Ruta absoluta en Windows para guardar pruebas de df
-    #ruta_salida = r"C:\Users\Usuario\Downloads\resultado_libros"
-    # Escribir a Excel para revisar resultados
-    #df.to_excel(ruta_salida, index=False)
-    #print(f"Archivo guardado en: {ruta_salida}")
-    
-    #fin
-
-
-#obtener reporte ux y subirlo a SQL
+#-----------------
+#proceso de reporte de Universo Global de clientes
+#----------------
 async def ux(new_page):
         
         #Ahora si, conseguir reportes:
@@ -552,7 +188,6 @@ async def ux(new_page):
         #funcion normalizadora de textos
 
 
-        from sqlalchemy import text
         with motor.begin() as conn:
             # Obtener el mapeo de direcciones a códigos
             sql_query = text("""
@@ -579,7 +214,7 @@ async def ux(new_page):
         #limpieza final del df2
         #cuando la columna codigo_gln no este vacia, copiar esos valores a la columna agencia
         df2_completo.loc[df2_completo['Codigo_GLN'].notna(), 'Agencia'] = df2_completo.loc[df2_completo['Codigo_GLN'].notna(), 'Codigo_GLN']
-        import numpy as np
+        
         df2_completo.loc[~df2_completo['Potencial'].str.contains('credito', case=False, na=False),'Potencial'] = np.nan
         #aqui se van a modificar dos registros especificos de clientes que no tenian id al descargar el archivo
         #inicial y por lo tanto se tuvieron que buscar sus id de forma manual
@@ -700,7 +335,6 @@ async def ux(new_page):
         #print(f"Archivo guardado en: {ruta_salida}")
         
         #conectar a SQL y subir datos
-        from sqlalchemy import text
         #probar que la conexión sea exitosa e insertar datos
         #también verifica si los datos con la fecha ya existen
         with motor.begin() as conn:
@@ -752,37 +386,3 @@ async def ux(new_page):
                 chunksize=500
             )
             print("✅ Datos insertados correctamente.")
-        
-        # Ruta absoluta en Windows para guardar pruebas de df
-        #ruta_salida = r"D:\Descargas\resultado_UX.xlsx"
-        # Escribir a Excel para revisar resultados
-        #df.to_excel(ruta_salida, index=False)
-        #print(f"Archivo guardado en: {ruta_salida}")
-        
-        
-        #fin
-        
-
-
-
-
-#función principal que llama a las sub.funciones que descargan cada reporte
-async def main(fecha_hoy):
-    print(f"\n>>> Ejecutando procesos para: {fecha_hoy}")
-    async with async_playwright() as p:
-        #iniciar sesion 1 sola vez por día de proceso
-        new_page, browser, context = await carga_pagina(p,usuariops,contraseñaps,headless=False)
-        try:
-            #print("ejecutando libros...")
-            #await libros(new_page)
-            print("ejecutando UX...")
-            await ux(new_page)
-        finally:
-            await browser.close()
-
-
-if __name__ == "__main__":
-     # Ejecutar solo para hoy
-    fecha_hoy_obj = datetime.today().date()
-    fecha_hoy_str = fecha_hoy_obj.strftime("%d-%m-%Y")
-    asyncio.run(main(fecha_hoy_str))
