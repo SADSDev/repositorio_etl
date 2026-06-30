@@ -15,7 +15,7 @@ import configuraciones.entorno
 from configuraciones.parametros import (usuariops, contraseñaps)
 #procesos
 from core.navegador import carga_pagina
-from procesos.ux import ux
+from procesos.universo_clientes import universo
 from procesos.libros import libros
 #-----------------------------------
 #PROCESO
@@ -29,8 +29,9 @@ async def main(fecha_hoy):
         try:
             print("ejecutando libros...")
             await libros(new_page)
+            
             print("ejecutando UX...")
-            await ux(new_page)
+            await universo(new_page, fecha_hoy)
         finally:
             await browser.close()
 

@@ -11,6 +11,7 @@ from sqlalchemy import text
 #------------------------
 from configuraciones.conexion_sql import motor
 from core.normalizacion_texto import normalizar_texto
+from configuraciones.parametros import desde_agencia
 
 #-----------------
 #proceso de reporte de Universo Global de clientes
@@ -42,7 +43,7 @@ async def ux(new_page):
         
         # Llenar campo Agencia (input tipo number)
         await new_page.fill('input[id$="__variable_2_element"]', "")  # limpiarpiar
-        await new_page.fill('input[id$="__variable_2_element"]', "8")  # valor fijo
+        await new_page.fill('input[id$="__variable_2_element"]', str(desde_agencia))  # valor fijo
         await new_page.wait_for_timeout(1000)#espera 1 segundo
         
         #hacer click en boton para ver el reporte
