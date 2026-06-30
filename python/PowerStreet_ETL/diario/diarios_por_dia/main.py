@@ -25,7 +25,7 @@ async def main(fecha_hoy):
     print(f"\n>>> Ejecutando procesos para: {fecha_hoy}")
     async with async_playwright() as p:
         #iniciar sesion 1 sola vez por día de proceso
-        new_page, browser, context = await carga_pagina(p,headless=False)
+        new_page, browser, context = await carga_pagina(p,headless=True)
         try:
             print("ejecutando libros...")
             await libros(new_page)
