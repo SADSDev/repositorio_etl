@@ -86,7 +86,7 @@ async def universo(new_page, fecha_hoy):
             temp_path = temp_file.name  # Guardar ruta para leer después
         
         # Leer el archivo con pandas
-        df = pd.read_excel(temp_path, engine="openpyxl")
+        df = pd.read_csv(temp_path, sep='\t', encoding='utf-8')
         print("Archivo obtenido!!")
         print(df.head())
 

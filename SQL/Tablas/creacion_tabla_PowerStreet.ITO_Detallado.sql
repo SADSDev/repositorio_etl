@@ -11,7 +11,7 @@ CREATE TABLE PowerStreet.ITO_Detallado
     Secuencia_Real                  INT NULL,
 
     Cliente                         VARCHAR(50) NOT NULL,
-    Nombre_Cliente                   VARCHAR(250) NOT NULL,
+    Nombre_Cliente                   VARCHAR(250) NULL,
 
     id_Visita                       VARCHAR(100) NULL,
 
