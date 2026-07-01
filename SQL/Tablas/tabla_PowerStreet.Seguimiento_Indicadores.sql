@@ -1,0 +1,28 @@
+CREATE TABLE PowerStreet.Seguimiento_Indicadores_Rutas
+(
+    Agencia                         VARCHAR(200)   NOT NULL,
+    Fecha                           DATE           NOT NULL,
+    NUR                             VARCHAR(20)    NOT NULL,
+    Dias_Trabajados                 INT            NOT NULL,
+    Clientes_Universo               INT            NOT NULL,
+    Clientes_ITO                    INT            NOT NULL,
+    Visitas_Programadas             INT            NOT NULL,
+    Total_Visitas                   INT            NOT NULL,
+    Visitas_Fuera_ITO               INT            NOT NULL,
+    Clientes_Visitados              INT            NOT NULL,
+    Cobertura_Clientes_Universo     DECIMAL(12,4)  NOT NULL,
+    Indicador_Frecuencia            DECIMAL(12,4)  NOT NULL,
+    Eficiencia_ITO                  DECIMAL(12,4)  NOT NULL,
+    Visitas_Con_Compras             INT            NOT NULL,
+    Efectividad_Visitas             DECIMAL(12,4)  NOT NULL,
+    Clientes_Con_Compras            INT            NOT NULL,
+    Efectividad_Compra              DECIMAL(12,4)  NOT NULL,
+    Total_Paquetes                  DECIMAL(12,4)  NOT NULL,
+    Total_Cajetillas_Sin_Combos     DECIMAL(12,4)  NOT NULL,
+    Drop_Size_General               DECIMAL(12,4)  NOT NULL,
+    Drop_Size_Efectivo              DECIMAL(12,4)  NOT NULL,
+    Clientes_Con_Credito            INT            NOT NULL,
+    Promedio_Diario_Volumen         DECIMAL(12,4)  NOT NULL,
+    Promedio_Diario_Visitas         DECIMAL(12,4)  NOT NULL,
+    Fee_Distribucion                DECIMAL(12,4)  NOT NULL
+);

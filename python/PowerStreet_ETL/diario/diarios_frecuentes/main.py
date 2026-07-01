@@ -13,6 +13,8 @@ from configuraciones.conexion_sql import motor
 import configuraciones.entorno
 from core.navegador import carga_pagina
 from procesos.db_cliente import dbcliente
+from procesos.ventas_diarias import ventas
+from procesos.seguimiento_indicadores import indicadores
 from procesos.tiempos_y_movimientos import tiempos
 from procesos.cp import cp
 from procesos.combos import combos
@@ -39,6 +41,12 @@ async def main(fecha_hoy):
 
             print("ejecutando dbcliente...")
             await dbcliente(new_page, fecha_hoy)
+
+            print("ejecutando venta diaria...")
+            await ventas(new_page, fecha_hoy)
+
+            print("ejecutando indicadores...")
+            await indicadores(new_page,fecha_hoy)
 
             print("ejecutando tiempos...")
             await tiempos(new_page, fecha_hoy)
@@ -71,6 +79,10 @@ def obtener_ultima_fecha_sql():
             FROM (
                 SELECT MAX(Fecha) AS Fecha_Maxima FROM PowerStreet.DB_Cliente
                 UNION ALL
+                SELECT MAX(Fecha) FROM PowerStreet.Venta_Diaria
+                UNION ALL
+                SELECT MAX(Fecha) FROM PowerStreet.Seguimiento_Indicadores
+                UNION ALL
                 SELECT MAX(Fecha) FROM PowerStreet.[1c1p]
                 UNION ALL
                 SELECT MAX(Fecha) FROM PowerStreet.Combos
@@ -102,11 +114,7 @@ if __name__ == "__main__":
     )
 
     fecha_hoy_obj = datetime.today().date()
-
-    if (
-        ultima_fecha_sql
-        and fecha_hoy_obj > ultima_fecha_sql
-    ):
+    if (ultima_fecha_sql and fecha_hoy_obj > ultima_fecha_sql):
 
         print(
             f"Hoy es {fecha_hoy_obj} y el último registro "
