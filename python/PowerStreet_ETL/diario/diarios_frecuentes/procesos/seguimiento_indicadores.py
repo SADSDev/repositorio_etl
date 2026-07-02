@@ -138,7 +138,12 @@ async def indicadores(new_page,fecha_hoy):
                 raise ValueError(f"❌ El DataFrame tiene {len(df.columns)} columnas pero la tabla SQL tiene {len(sql_columns)}.")
             df.columns = sql_columns#renombrar columnas para que sean iguales a las del df
             print("✅ Columnas renombradas correctamente:")
-            
+            df[["Clientes_Con_Compras", "Efectividad_Compra"]] = (
+                df[["Clientes_Con_Compras", "Efectividad_Compra"]]
+                .fillna(0)
+            )
+
+
             #eliminar fechas duplicadas por agencia/ruta
             fecha_df = pd.to_datetime(df['Fecha'].iloc[0], dayfirst=True).date()
             nur = str(df["NUR"].iloc[0]).strip()
