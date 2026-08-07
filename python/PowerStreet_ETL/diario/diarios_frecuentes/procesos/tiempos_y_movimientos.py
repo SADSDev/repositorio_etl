@@ -63,7 +63,7 @@ async def tiempos(new_page,fecha_hoy):
     #esperar la ventana del reporte para descargar
     iframe_element = await new_page.wait_for_selector('iframe[id*="reportView"]')
     frame = await iframe_element.content_frame()
-    await frame.wait_for_selector("tr.column-header")
+    await frame.wait_for_selector("tr.column-header", timeout=180000)
     
     print("datos totalmente cargados, listo para descargar")
     

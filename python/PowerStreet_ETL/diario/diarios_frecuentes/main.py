@@ -18,6 +18,7 @@ from procesos.seguimiento_indicadores import indicadores
 from procesos.tiempos_y_movimientos import tiempos
 from procesos.cp import cp
 from procesos.combos import combos
+from procesos.compos_por_cliente import combos_por_cliente
 from procesos.fullfillment_pedidos_pmm import fullfillment_pedidos
 from procesos.ito_consolidado import ito_consolidado
 from procesos.ito_detallado import ito_detallado
@@ -53,6 +54,9 @@ async def main(fecha_hoy):
 
             print("ejecutando 1c1p...")
             await cp(new_page, fecha_hoy)
+
+            print("ejecutando combos por lciente")
+            await combos_por_cliente(new_page, fecha_hoy)
 
             print("ejecutando combos...")
             await combos(new_page, fecha_hoy)

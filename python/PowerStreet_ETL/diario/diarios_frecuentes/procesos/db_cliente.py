@@ -163,7 +163,7 @@ async def dbcliente(new_page, fecha_hoy):
     columnas.insert(indice_ruta + 1,columnas.pop(columnas.index('Familia')))
     dbcliente=dbcliente[columnas]
     #Agregar columna cajetilla haciendo merge con la tabla articulos_completos
-    consulta = "SELECT Codigo, Unidades FROM CATALOGOS.Articulos_Completos"
+    consulta = "SELECT Codigo, Unidades FROM CATALOGOS.Articulos"
     df_vendedores = pd.read_sql(consulta, motor)
     dbcliente = dbcliente.merge(
         df_vendedores,

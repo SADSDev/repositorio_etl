@@ -10,7 +10,7 @@ import numpy as np
 #------------------------
 #IMPORTS
 #------------------------
-from configuraciones.conexion_sql import motor
+from core.subirDatosSQL import subir_datos_a_sql
 from configuraciones.parametros import (desde_agencia, hasta_agencia)
 
 #-----------------------------
@@ -104,40 +104,4 @@ async def ito_detallado(new_page, fecha_hoy):
     itodetallado = itodetallado.replace(["", "SIN VISITA"], np.nan)
     
     #subir datos a SQL server 
-    with motor.begin() as conn:
-        result = conn.execute(text("SELECT 1"))
-        print("✅ Conexión exitosa:", result.scalar(),"Subiendo datos...")
-
-        # Obtener nombres de columnas exactos desde SQL Server en orden
-        sql_column_query = text("""
-            SELECT COLUMN_NAME 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = 'PowerStreet' AND TABLE_NAME = 'ITO_Detallado'
-            ORDER BY ORDINAL_POSITION
-        """)
-        sql_column_result = conn.execute(sql_column_query).fetchall()
-        sql_columns = [row[0] for row in sql_column_result]
-        if len(itodetallado.columns) != len(sql_columns):
-            raise ValueError(f"❌ El DataFrame tiene {len(itodetallado.columns)} columnas pero la tabla SQL tiene {len(sql_columns)}.")
-        itodetallado.columns = sql_columns#renombrar columnas para que sean iguales a las del df
-        print("✅ Columnas renombradas correctamente:")
-
-        itodetallado_mov = pd.to_datetime(itodetallado['Fecha'].iloc[0], dayfirst=True).date()
-
-        sql_delete = text("""
-            DELETE FROM PowerStreet.ITO_Detallado
-            WHERE CONVERT(date, Fecha) = :Fecha
-        """)
-        conn.execute(sql_delete, {'Fecha': itodetallado_mov})
-        print(f"✅ Registros con fecha {itodetallado_mov} eliminados.")
-
-        itodetallado.to_sql(
-            name='ITO_Detallado',
-            con=conn,
-            schema='PowerStreet',
-            if_exists='append',
-            chunksize=100,
-            method=None,
-            index=False
-        )
-        print("✅ Datos insertados correctamente.")
+    subir_datos_a_sql(itodetallado,schema='PowerStreet', tabla='ITO_Detallado')

@@ -10,7 +10,7 @@ import numpy as np
 #------------------------
 #IMPORTS
 #------------------------
-from configuraciones.conexion_sql import motor
+from core.subirDatosSQL import subir_datos_a_sql
 from configuraciones.parametros import (desde_agencia, hasta_agencia)
 #-----------------------------
 #PROCESO
@@ -97,42 +97,6 @@ async def fullfillment_pedidos(new_page, fecha_hoy):
     #reemplazar todos los "" con nan
     fullfillment = fullfillment.replace([""], np.nan)
     
-    
     #subir datos a SQL server 
-    with motor.begin() as conn:
-        result = conn.execute(text("SELECT 1"))
-        print("✅ Conexión exitosa:", result.scalar(),"Subiendo datos...")
-
-        # Obtener nombres de columnas exactos desde SQL Server en orden
-        sql_column_query = text("""
-            SELECT COLUMN_NAME 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = 'PowerStreet' AND TABLE_NAME = 'Fullfillment_Pedidos_PMM'
-            ORDER BY ORDINAL_POSITION
-        """)
-        sql_column_result = conn.execute(sql_column_query).fetchall()
-        sql_columns = [row[0] for row in sql_column_result]
-        if len(fullfillment.columns) != len(sql_columns):
-            raise ValueError(f"❌ El DataFrame tiene {len(fullfillment.columns)} columnas pero la tabla SQL tiene {len(sql_columns)}.")
-        fullfillment.columns = sql_columns#renombrar columnas para que sean iguales a las del df
-        print("✅ Columnas renombradas correctamente:")
-
-        fullfillment_mov = pd.to_datetime(fullfillment['Fecha'].iloc[0], dayfirst=True).date()
-
-        sql_delete = text("""
-            DELETE FROM PowerStreet.Fullfillment_Pedidos_PMM
-            WHERE CONVERT(date, Fecha) = :Fecha
-        """)
-        conn.execute(sql_delete, {'Fecha': fullfillment_mov})
-        print(f"✅ Registros con fecha {fullfillment_mov} eliminados.")
-
-        fullfillment.to_sql(
-            name='Fullfillment_Pedidos_PMM',
-            con=conn,
-            schema='PowerStreet',
-            if_exists='append',
-            chunksize=100,
-            method=None,
-            index=False
-        )
-        print("✅ Datos insertados correctamente.")
+    subir_datos_a_sql(fullfillment,schema='PowerStreet', tabla='Fullfillment_Pedidos_PMM') 
+    

@@ -13,7 +13,7 @@ from sqlalchemy import text
 #----------------------------------------
 #IMPORTS
 #----------------------------------------
-from configuraciones.conexion_sql import motor
+from core.subirDatosSQL import subir_datos_a_sql
 from configuraciones.parametros import desde_agencia, hasta_agencia
 
 #-----------------------------------
@@ -118,57 +118,5 @@ async def indicadores(new_page,fecha_hoy):
         df[cols_num] = df[cols_num].round(2)
      
         
-        #conectar a SQL y subir datos
-        #probar que la conexión sea exitosa e insertar datos
-        #también verifica si los datos con la fecha ya existen
-        with motor.begin() as conn:
-            result = conn.execute(text("SELECT 1"))
-            print("✅ Conexión exitosa:", result.scalar())
-
-            # Obtener nombres de columnas exactos desde SQL Server en orden
-            sql_column_query = text("""
-                SELECT COLUMN_NAME 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_SCHEMA = 'PowerStreet' AND TABLE_NAME = 'Seguimiento_Indicadores'
-                ORDER BY ORDINAL_POSITION
-            """)
-            sql_column_result = conn.execute(sql_column_query).fetchall()
-            sql_columns = [row[0] for row in sql_column_result]
-            if len(df.columns) != len(sql_columns):
-                raise ValueError(f"❌ El DataFrame tiene {len(df.columns)} columnas pero la tabla SQL tiene {len(sql_columns)}.")
-            df.columns = sql_columns#renombrar columnas para que sean iguales a las del df
-            print("✅ Columnas renombradas correctamente:")
-            df[["Clientes_Con_Compras", "Efectividad_Compra"]] = (
-                df[["Clientes_Con_Compras", "Efectividad_Compra"]]
-                .fillna(0)
-            )
-
-
-            #eliminar fechas duplicadas por agencia/ruta
-            fecha_df = pd.to_datetime(df['Fecha'].iloc[0], dayfirst=True).date()
-            nur = str(df["NUR"].iloc[0]).strip()
-            if nur[0].isalpha():
-                clave_nur = re.sub(r"\d+$", "", nur)
-            else:
-                clave_nur = re.match(r"\d+", nur).group()
-
-            sql_delete = text("""
-                DELETE FROM PowerStreet.Seguimiento_Indicadores
-                WHERE CONVERT(date, Fecha) = :Fecha
-                AND NUR LIKE '%' + :nur + '%'
-            """)
-            conn.execute(sql_delete, {'Fecha': fecha_df, 'nur': clave_nur})
-            print(f"✅ Registros con fecha {fecha_df}  de agencia {agencia} eliminados.")
-        
-            
-        with motor.begin() as conn:
-            df.to_sql(
-                name='Seguimiento_Indicadores',
-                con=conn,
-                schema='PowerStreet',
-                if_exists='append',
-                index=False,
-                chunksize=30,
-                method=None
-            )
-            print("✅ Datos insertados correctamente.")
+        #subir datos a SQL server 
+        subir_datos_a_sql(df,schema='PowerStreet', tabla='Seguimiento_Indicadores')
