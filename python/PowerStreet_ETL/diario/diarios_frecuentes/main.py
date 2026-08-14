@@ -49,13 +49,13 @@ async def main(fecha_hoy):
             print("ejecutando indicadores...")
             await indicadores(new_page,fecha_hoy)
 
-            print("ejecutando tiempos...")
-            await tiempos(new_page, fecha_hoy)
+            #print("ejecutando tiempos...")
+            #await tiempos(new_page, fecha_hoy)
 
-            print("ejecutando 1c1p...")
-            await cp(new_page, fecha_hoy)
+            #print("ejecutando 1c1p...")
+            #await cp(new_page, fecha_hoy)
 
-            print("ejecutando combos por lciente")
+            print("ejecutando combos por Clciente")
             await combos_por_cliente(new_page, fecha_hoy)
 
             print("ejecutando combos...")

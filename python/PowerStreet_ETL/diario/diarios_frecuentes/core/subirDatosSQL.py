@@ -1,10 +1,11 @@
 #subir datos a SQL server 
 
-#------------------
+#-------------------------------------------
 #LIBRERIAS
-#---------------------
+#-------------------------------------------
 from sqlalchemy import text
 import pandas as pd
+import re
 
 #--------------------------
 #IMPORTS
@@ -38,14 +39,19 @@ def subir_datos_a_sql(df: pd.DataFrame,
         df.columns = sql_columns#renombrar columnas para que sean iguales a las del df
         print("✅ Columnas renombradas correctamente:")
 
-        df_mov = pd.to_datetime(df['Fecha'].iloc[0], dayfirst=True).date()
+        # eliminar duplicados por fecha/ruta
+        fecha_df = pd.to_datetime(df["Fecha"].iloc[0], dayfirst=True).date()
+        nur = str(df["NUR"].iloc[0]).strip().upper()
 
-        sql_delete = text(f"""
-            DELETE FROM {schema}.{tabla}
+        clave_nur = re.sub(r"[A-Z]\d+$", "", nur)
+
+        sql_delete = text("""
+            DELETE FROM PowerStreet.Seguimiento_Indicadores
             WHERE CONVERT(date, Fecha) = :Fecha
+            AND NUR LIKE '%' + :nur + '%'
         """)
-        conn.execute(sql_delete, {"Fecha": df_mov})
-        print(f"✅ Registros con fecha {df_mov} eliminados.")
+        conn.execute(sql_delete, {"Fecha": fecha_df, "nur": clave_nur})
+        print(f"✅ Registros con fecha {fecha_df} eliminados")
 
         df.to_sql(
             name=tabla,
