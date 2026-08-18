@@ -87,11 +87,7 @@ def obtener_ultima_fecha_sql():
                 UNION ALL
                 SELECT MAX(Fecha) FROM PowerStreet.Seguimiento_Indicadores
                 UNION ALL
-                SELECT MAX(Fecha) FROM PowerStreet.[1c1p]
-                UNION ALL
                 SELECT MAX(Fecha) FROM PowerStreet.Combos
-                UNION ALL
-                SELECT MAX(Fecha_visita) FROM PowerStreet.Tiempos_y_Mov
                 UNION ALL
                 SELECT MAX(Fecha) FROM PowerStreet.Fullfillment_Pedidos_PMM
                 UNION ALL

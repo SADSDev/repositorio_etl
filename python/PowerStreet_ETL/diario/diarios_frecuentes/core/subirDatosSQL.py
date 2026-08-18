@@ -45,12 +45,19 @@ def subir_datos_a_sql(df: pd.DataFrame,
 
         clave_nur = re.sub(r"[A-Z]\d+$", "", nur)
 
-        sql_delete = text("""
-            DELETE FROM PowerStreet.Seguimiento_Indicadores
+        sql_delete = text(f"""
+            DELETE FROM {schema}.{tabla}
             WHERE CONVERT(date, Fecha) = :Fecha
             AND NUR LIKE '%' + :nur + '%'
         """)
-        conn.execute(sql_delete, {"Fecha": fecha_df, "nur": clave_nur})
+
+        conn.execute(
+            sql_delete,
+            {
+                "Fecha": fecha_df,
+                "nur": clave_nur
+            }
+        )
         print(f"✅ Registros con fecha {fecha_df} eliminados")
 
         df.to_sql(
