@@ -1,31 +1,36 @@
 #--------------------
 #LIBRERIAS
 #--------------------
-import tempfile
-from pathlib import Path
-import pandas as pd
-import numpy as np
-from sqlalchemy import text
 import asyncio
-import shutil
+
+import numpy as np
+import pandas as pd
+from datetime import date
+from playwright.async_api import Page
+
 #------------------------
 #IMPORTS
 #------------------------
-from configuraciones.conexion_sql import motor
+from configuraciones.parametros import (
+    desde_agencia,
+    hasta_agencia
+)
+
 from core.normalizacion_texto import normalizar_texto
-from configuraciones.parametros import desde_agencia, hasta_agencia 
+from core.subirDatosSQL import subir_datos_a_sql
+from core.vaciarTablaSQL import vaciar_tabla_sql
+
 
 #-----------------
 #proceso de reporte de Universo Global de clientes
 #----------------
-async def libros(new_page):
-    #vaciar primero toda la tabla de libros 
-    with motor.begin() as conn:
-        conn.execute(text("""
-            TRUNCATE TABLE PowerStreet.Libros
-        """))
-    print("✅ Tabla Libros vaciada.")
+async def libros_descarga(
+    new_page: Page,
+    fecha_hoy: date
+):
 
+
+    dataframes = []
     for agencia in range(desde_agencia, hasta_agencia+1):
         print(f"obteniendo Libro de rutas de agencia {agencia}")
         #Ahora si, conseguir reportes:
@@ -54,7 +59,8 @@ async def libros(new_page):
         # Llenar campo Agencia (input tipo number)
         await new_page.fill('input[id$="__variable_3_element"]', "")  # limpiarpiar
         await new_page.fill('input[id$="__variable_3_element"]', str(agencia))  # valor fijo
-        await new_page.wait_for_timeout(1000)#espera 1 segundo
+        await new_page.wait_for_timeout(2000)#espera 1 segundo
+        await new_page.keyboard.press("Tab")
         #hacer click en boton para ver el reporte
         await new_page.get_by_role("button", name="Ver").click()
         
@@ -130,76 +136,62 @@ async def libros(new_page):
 
         # Obtener ruta del archivo descargado
         download_path = await download.path()
-        print("Archivo descargado en ruta temporal:", download_path)
 
-        # Copiarlo a un temporal
-        with tempfile.NamedTemporaryFile(suffix=".xls", delete=False) as temp_file:
-            shutil.copy(download_path, temp_file.name)
-            temp_path = temp_file.name
+        if download_path is None:
+            raise RuntimeError(
+                f"No se pudo obtener el archivo "
+                f"de la agencia {agencia}."
+            )
 
         # Leer archivo
-        df = pd.read_csv(
-            temp_path,
+        df_i = pd.read_csv(
+            download_path,
             header=None,
             sep="\t",
             encoding="utf-8"
         )
 
         print("Archivo obtenido!!")
-        print(df.head())
+        print(df_i.head())
 
         print("transformando archivo y subiendo archivo")
         
-        #TRANSFORMACION DEL DF
+        #TRANSFORMACION DEL df_i
         #eliminar columnas "unnamed"
-        df = df.dropna(axis=1, how="all")
+        df_i = df_i.dropna(axis=1, how="all")
         # Convierte cadenas vacías o con solo espacios a NaN
-        df = df.replace(r'^\s*$', np.nan, regex=True)
-        titulos = [str(i) for i in range(len(df.columns))]
-        df.columns=titulos
+        df_i = df_i.replace(r'^\s*$', np.nan, regex=True)
+        titulos = [str(i) for i in range(len(df_i.columns))]
+        df_i.columns=titulos
+        #agregar columna de fecha de actualizacion y colocarla después de Orden
+        df_i.insert(4, "Fecha_Actualizacion", pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce'))
+        
 
-        """
-        #Ruta en Windows para guardar pruebas de df
-        ruta_salida = r"D:\Descargas\resultado_Libros.xlsx"
-        # Escribir a Excel para revisar resultados
-        df.to_excel(ruta_salida, index=False)
-        print(f"Archivo guardado en: {ruta_salida}")
-        """
+        dataframes.append(df_i)
 
-        #conectar a SQL y subir datos
-        df=df.applymap(normalizar_texto)#normalizar texto del df principal
-        #probar que la conexión sea exitosa e insertar datos
-        #también verifica si los datos con la fecha ya existen
-        with motor.begin() as conn:
-            # ✓ Probar conexión
-            result = conn.execute(text("SELECT 1"))
-            print("✅ Conexión exitosa:", result.scalar())
+    if not dataframes:
+        return pd.DataFrame()
 
-            # ✓ Obtener columnas reales de SQL, EXCLUYENDO LA COLUMNA ID
-            sql_column_query = text("""
-                SELECT COLUMN_NAME 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_SCHEMA = 'PowerStreet' 
-                AND TABLE_NAME = 'Libros'
-                AND COLUMNPROPERTY(OBJECT_ID('PowerStreet.Libros'), COLUMN_NAME, 'IsIdentity') = 0
-                ORDER BY ORDINAL_POSITION;
-            """)
-            sql_column_result = conn.execute(sql_column_query).fetchall()
-            sql_columns = [row[0] for row in sql_column_result]
+    df_final = pd.concat(dataframes, ignore_index=True)
 
-            if len(df.columns) != len(sql_columns):
-                raise ValueError(f"❌ El DataFrame tiene {len(df.columns)} columnas "
-                                f"pero la tabla SQL tiene {len(sql_columns)}.")
+    return df_final
 
-            df.columns = sql_columns
-            print("✅ Columnas renombradas correctamente.") 
-            #Insertar datos
-            df.to_sql(
-                name='Libros',
-                con=conn,
-                schema='PowerStreet',
-                if_exists='append',
-                index=False,
-                chunksize=500
-            )
-            print("✅ Datos insertados correctamente.")
+def libros_carga_sql(
+    df: pd.DataFrame,
+    schema: str,
+    tabla: str
+) -> None:
+
+    if df is None or df.empty:
+        raise RuntimeError(
+            "El DataFrame de Libros está vacío. "
+            "No se vaciará ni cargará la tabla."
+        )
+
+    # El vaciado ocurre en la fase de carga,
+    # nunca durante la descarga.
+    vaciar_tabla_sql(schema=schema, tabla=tabla)
+
+    subir_datos_a_sql(df=df, schema=schema, tabla=tabla)
+
+    print( f"Libros cargado correctamente en " f"{schema}.{tabla}.")

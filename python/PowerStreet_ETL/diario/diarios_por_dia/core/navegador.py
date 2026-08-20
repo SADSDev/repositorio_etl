@@ -5,6 +5,7 @@ import base64
 import cv2
 import numpy as np
 
+
 from paddleocr import PaddleOCR
 
 #--------------------------
@@ -12,7 +13,8 @@ from paddleocr import PaddleOCR
 #-------------------------
 from configuraciones.parametros import (
     usuariops,
-    contraseñaps
+    contraseñaps,
+    urlpowerstreet
 )
 
 #--------------------------------
@@ -39,7 +41,7 @@ async def carga_pagina(p, headless=True):
         locale="es-MX",)
     page = await context.new_page()
 
-    await safe_goto(page, url="https://client.powerstreet.cloud")
+    await safe_goto(page, url=urlpowerstreet)
     await page.wait_for_load_state("networkidle", timeout=240000)
     print("Página cargada!!!")
 

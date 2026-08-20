@@ -12,12 +12,8 @@ from sqlalchemy import text
 from configuraciones.conexion_sql import motor
 import configuraciones.entorno
 from core.navegador import carga_pagina
-from procesos.db_cliente import dbcliente
 from procesos.ventas_diarias import ventas
 from procesos.seguimiento_indicadores import indicadores
-from procesos.tiempos_y_movimientos import tiempos
-from procesos.cp import cp
-from procesos.combos import combos
 from procesos.compos_por_cliente import combos_por_cliente
 from procesos.fullfillment_pedidos_pmm import fullfillment_pedidos
 from procesos.ito_consolidado import ito_consolidado
@@ -40,26 +36,14 @@ async def main(fecha_hoy):
 
         try:
 
-            print("ejecutando dbcliente...")
-            await dbcliente(new_page, fecha_hoy)
-
             print("ejecutando venta diaria...")
             await ventas(new_page, fecha_hoy)
 
             print("ejecutando indicadores...")
             await indicadores(new_page,fecha_hoy)
 
-            #print("ejecutando tiempos...")
-            #await tiempos(new_page, fecha_hoy)
-
-            #print("ejecutando 1c1p...")
-            #await cp(new_page, fecha_hoy)
-
             print("ejecutando combos por Clciente")
             await combos_por_cliente(new_page, fecha_hoy)
-
-            print("ejecutando combos...")
-            await combos(new_page, fecha_hoy)
 
             print("ejecuntando pedidos pmm...")
             await fullfillment_pedidos(new_page, fecha_hoy)
@@ -81,20 +65,34 @@ def obtener_ultima_fecha_sql():
         ultima_fecha_texto = text("""
             SELECT MIN(Fecha_Maxima) AS Menor_Fecha_Reciente
             FROM (
-                SELECT MAX(Fecha) AS Fecha_Maxima FROM PowerStreet.DB_Cliente
+                SELECT MAX(Fecha) AS Fecha_Maxima
+                FROM PowerStreet.Venta_Diaria
+
                 UNION ALL
-                SELECT MAX(Fecha) FROM PowerStreet.Venta_Diaria
+
+                SELECT MAX(Fecha) AS Fecha_Maxima
+                FROM PowerStreet.Seguimiento_Indicadores
+
                 UNION ALL
-                SELECT MAX(Fecha) FROM PowerStreet.Seguimiento_Indicadores
+
+                SELECT MAX(Fecha) AS Fecha_Maxima
+                FROM PowerStreet.Combos_Por_Cliente
+
                 UNION ALL
-                SELECT MAX(Fecha) FROM PowerStreet.Combos
+
+                SELECT MAX(Fecha) AS Fecha_Maxima
+                FROM PowerStreet.Fullfillment_Pedidos_PMM
+
                 UNION ALL
-                SELECT MAX(Fecha) FROM PowerStreet.Fullfillment_Pedidos_PMM
+
+                SELECT MAX(Fecha) AS Fecha_Maxima
+                FROM PowerStreet.ITO_Consolidado
+
                 UNION ALL
-                SELECT MAX(Fecha) FROM PowerStreet.ITO_Consolidado
-                UNION ALL
-                SELECT MAX(Fecha) FROM PowerStreet.ITO_Detallado
-            ) AS fechas_maximas
+
+                SELECT MAX(Fecha) AS Fecha_Maxima
+                FROM PowerStreet.ITO_Detallado
+            ) AS fechas_maximas;
         """)
 
         resultado = conn.execute(

@@ -1,29 +1,49 @@
 #-----------------------------------------------------------------------
 #LIBRERIAS
 #-----------------------------------------------------------------------
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-# Credenciales PowerStreet
-usuariops = "sodedsros"
-contraseñaps = "Eadlrc123#"
 
-# Credenciales SQL
-servidor = "187.190.212.112"
-bd = "PowerStreet"
-usuario = "operacionDZ"
-contraseña = "68t9UKhkY!"
+#-----------------------------------------------------
+# PROCESO DE CARGAS DE OBTENCION DE VARIABLES DE ENTORNO
+#-----------------------------------------------------
 
-# Meses y días
-meses = [
-    'Enero', 'Febrero', 'Marzo', 'Abril',
-    'Mayo', 'Junio', 'Julio', 'Agosto',
-    'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-]
+# Cargar el .env ubicado en PowerStreet_ETL
+ruta_env = Path(__file__).resolve().parents[3] / ".env"
+load_dotenv(dotenv_path=ruta_env)
 
-dias = [
-    'Lunes', 'Martes', 'Miércoles',
-    'Jueves', 'Viernes', 'Sábado', 'Domingo'
-]
 
-#Agencias a consultar
-desde_agencia=1
-hasta_agencia=10
+def variable_obligatoria(nombre: str) -> str:
+    valor = os.getenv(nombre)
+
+    if valor is None or valor == "":
+        raise RuntimeError(f"No existe la variable de entorno obligatoria: {nombre}")
+    return valor
+
+
+# PowerStreet
+usuariops = variable_obligatoria("USERPS")
+contraseñaps = variable_obligatoria("PASSWORDPS")
+urlpowerstreet = variable_obligatoria("URLPOWERSTREET")
+
+
+# SQL Server
+servidor = variable_obligatoria("SERVER")
+bd = variable_obligatoria("DATABASE")
+usuario = variable_obligatoria("USER")
+contraseña = variable_obligatoria("PASSWORD")
+schema = variable_obligatoria("SCHEMA")
+
+
+# Agencias
+try:
+    desde_agencia = int(variable_obligatoria("DESDEAGENCIA"))
+    hasta_agencia = int(variable_obligatoria("HASTAAGENCIA"))
+
+except ValueError as error:
+    raise RuntimeError("DESDEAGENCIA y HASTAAGENCIA deben ser números enteros.") from error
+
+if desde_agencia > hasta_agencia:
+    raise RuntimeError("DESDEAGENCIA no puede ser mayor que HASTAAGENCIA.")

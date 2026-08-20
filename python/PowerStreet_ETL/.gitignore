@@ -10,13 +10,21 @@ dist/
 # Compiled Java class files
 *.class
 
-# Compiled Python bytecode
-__pycache__/
-*.py[cod]
+# Entorno virtual
 .venv/
-env/
-.vscode/
+venv/
+
+# Variables de entorno
 .env
+
+# IDE
+.vscode/
+.idea/
+
+# Compiled Python bytecode
+*.py[cod]
+__pycache__/
+*$py.class
 
 # Log files
 *.log

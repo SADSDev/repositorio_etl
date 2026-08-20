@@ -2,42 +2,60 @@
 #LIBRERIAS
 #----------------------------------------
 import asyncio
-from datetime import datetime, timedelta
-from playwright.async_api import async_playwright
+from datetime import datetime
+
 
 #----------------------------------------
 #IMPORTS
 #----------------------------------------
 #configuraciones
-from configuraciones.conexion_sql import motor
 import configuraciones.entorno
-#parametros
-from configuraciones.parametros import (usuariops, contraseñaps)
-#procesos
+from playwright.async_api import async_playwright
+
+from configuraciones.parametros import schema
 from core.navegador import carga_pagina
-from procesos.universo_clientes import universo
-from procesos.libros import libros
+
+from procesos.libros import (
+    libros_descarga,
+    libros_carga_sql
+)
+
+from procesos.universo_clientes import (
+    universo_descarga,
+    universo_carga_sql
+)
 #-----------------------------------
 #PROCESO
 #-----------------------------------
 
 async def main(fecha_hoy):
-    print(f"\n>>> Ejecutando procesos para: {fecha_hoy}")
+
+    print(f"\n>>> DESCARGANDO datos "f"para {fecha_hoy}")
+
     async with async_playwright() as p:
-        #iniciar sesion 1 sola vez por día de proceso
         new_page, browser, context = await carga_pagina(p,headless=True)
         try:
-            print("ejecutando libros...")
-            await libros(new_page)
-            
-            print("ejecutando UX...")
-            await universo(new_page, fecha_hoy)
+
+            print("Descargando Libro de rutas...")
+            df_libros = await libros_descarga(new_page,fecha_hoy)
+
+            print("Descargando Universo de Clientes...")
+            df_universo = await universo_descarga(new_page,fecha_hoy)
         finally:
             await browser.close()
 
+    print("\n>>> DESCARGA de archivos completa.")
+
+    print("\n>>> CARGANDO datos en SQL...")
+
+    # Estas funciones se ejecutan solamente
+    # después de terminar todas las descargas.
+    libros_carga_sql(df=df_libros,schema=schema,tabla="Libros")
+    universo_carga_sql(df=df_universo,schema=schema,tabla="Universo_Clientes")
+
+    print("\n>>> CARGA terminada correctamente.")
+
 
 if __name__ == "__main__":
-     # Ejecutar solo para hoy
-    fecha_hoy_obj = datetime.today().date()
-    fecha_hoy_str = fecha_hoy_obj.strftime("%d-%m-%Y")
-    asyncio.run(main(fecha_hoy_str))
+    fecha_hoy = datetime.today().strftime("%d-%m-%Y")
+    asyncio.run(main(fecha_hoy))
