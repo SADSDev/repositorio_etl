@@ -15,9 +15,12 @@ from configuraciones.parametros import (desde_agencia, hasta_agencia)
 #-----------------------------
 #PROCESO
 #-----------------------------
-async def ito_consolidado(new_page, fecha_hoy):
+async def ito_consolidado_descarga(new_page, fecha_hoy):
+
     #abriendo busqueda rápida y buscandolo manualmente
-    print("obteniendo reporte ito al detalle...")
+    print("obteniendo reporte ito consolidado...")
+    await new_page.reload(wait_until="networkidle",timeout=240000)
+    await new_page.wait_for_timeout(1500)
     await new_page.click('div.quicksearch-btn')
     #Esperar a que aparezca la barra de búsqueda 
     await new_page.locator('input.search-box-text').wait_for(state='visible')
@@ -25,10 +28,11 @@ async def ito_consolidado(new_page, fecha_hoy):
     await new_page.locator('input.search-box-text').fill("Reporte Consolidado Cobertura ITO % Geocerca")
     #Esperar que aparezcan resultados en el contenedor
     await new_page.locator('div.search-box-results').wait_for(state='visible')
-    #Dar clic al primer resultado con tabindex="0"
-    await new_page.locator('div.searchbox-item[tabindex="0"]').click()
+    #Dar clic al resultado con texto exacto buscado
+    await new_page.locator('div.search-box-results > div.searchbox-item').filter(
+        has_text="Reporte Consolidado Cobertura ITO % Geocerca"
+    ).first.click()
     
-
 
     #esperar ventana "propiedades"
     await new_page.wait_for_selector('ui-window[visible="true"]', timeout=30000)
@@ -87,12 +91,12 @@ async def ito_consolidado(new_page, fecha_hoy):
     shutil.copyfile(download_path, temp_path)
         
     # LEER EL ARCHIVO LIMPIO CON PANDAS
-    itoconsolidado = pd.read_excel(temp_path, engine="openpyxl")
-    print(f"Total de registros procesados: {len(itoconsolidado)}")
-    print(itoconsolidado.head())
+    df = pd.read_excel(temp_path, engine="openpyxl")
+    print(f"Total de registros procesados: {len(df)}")
+    print(df.head())
     
     #revisar si archivo esta vacio si es asi, terminar proceso
-    if itoconsolidado.empty:
+    if df.empty:
         print("Sin registros en este archivo. Proceso terminado.")
         return   
     print("transformando archivo")
@@ -100,14 +104,19 @@ async def ito_consolidado(new_page, fecha_hoy):
     #TRANSFORMACIÓN DEL DF
     #Eliminar columnas que no se necesitarán
     #COLUMNA CON FECHA DEL DIA DE HOY Y ACOMODARLA DSPUÉS DE AGENCIA
-    itoconsolidado['Fecha'] = pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
-    columnas=itoconsolidado.columns.to_list()
+    df['Fecha'] = pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
+    columnas=df.columns.to_list()
     indice_agencia= columnas.index('Agencia')
     columnas.insert(indice_agencia + 1,columnas.pop(columnas.index('Fecha')))
-    itoconsolidado=itoconsolidado[columnas]
+    df=df[columnas]
     #pasar columnas pct´s a formato de decimal (divdir entre 100)
-    cols_pct = [col for col in itoconsolidado.columns if "Pct_" in col]
-    itoconsolidado[cols_pct]=itoconsolidado[cols_pct]/100
-    
+    cols_pct = [col for col in df.columns if "Pct_" in col]
+    df[cols_pct]=df[cols_pct]/100
+
+    df_final=df
+    return df
+
+def ito_consolidado_carga_sql(df: pd.DataFrame, schema:str, tabla:str)-> None:
     #subir datos a SQL server 
-    subir_datos_a_sql(itoconsolidado,schema='PowerStreet', tabla='ITO_Consolidado')
+    subir_datos_a_sql(df=df,schema=schema, tabla=tabla)
+    print(f"datos cargado correctamente en " f"{schema}.{tabla}")

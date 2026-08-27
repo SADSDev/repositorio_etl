@@ -50,8 +50,8 @@ async def main(fecha_hoy):
 
     # Estas funciones se ejecutan solamente
     # después de terminar todas las descargas.
-    libros_carga_sql(df=df_libros,schema=schema,tabla="Libros")
-    universo_carga_sql(df=df_universo,schema=schema,tabla="Universo_Clientes")
+    libros_carga_sql(df=df_libros,schema=schema,tabla="POWERSTREET_Libros")
+    universo_carga_sql(df=df_universo,schema=schema,tabla="POWERSTREET_Universo_Clientes")
 
     print("\n>>> CARGA terminada correctamente.")
 

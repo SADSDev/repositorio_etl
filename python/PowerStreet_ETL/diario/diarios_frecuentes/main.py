@@ -10,14 +10,28 @@ from sqlalchemy import text
 #IMPORTS
 #----------------------------------------
 from configuraciones.conexion_sql import motor
+from configuraciones.parametros import schema
 import configuraciones.entorno
+
 from core.navegador import carga_pagina
-from procesos.ventas_diarias import ventas
-from procesos.seguimiento_indicadores import indicadores
-from procesos.compos_por_cliente import combos_por_cliente
-from procesos.fullfillment_pedidos_pmm import fullfillment_pedidos
-from procesos.ito_consolidado import ito_consolidado
-from procesos.ito_detallado import ito_detallado
+from procesos.ventas_diarias import(
+    ventas_descarga, ventas_carga_sql
+)
+from procesos.seguimiento_indicadores import(
+    indicadores_descarga, indicadores_carga_sql
+)
+from procesos.combos_por_cliente import(
+    combos_por_cliente_descarga, combos_por_cliente_carga_sql
+)
+from procesos.fullfillment_pedidos_pmm import(
+    fullfillment_pedidos_descarga, fullfillment_pedidos_carga_sql
+)
+from procesos.ito_consolidado import(
+    ito_consolidado_descarga, ito_consolidado_carga_sql
+)
+from procesos.ito_detallado import(
+    ito_detallado_descarga, ito_detallado_carga_sql
+)
 #-----------------------------------
 #PROCESO
 #-----------------------------------
@@ -25,86 +39,105 @@ from procesos.ito_detallado import ito_detallado
 #definicion de main
 async def main(fecha_hoy):
 
-    print(f"\n>>> Ejecutando procesos para: {fecha_hoy}")
+    print(f"\n>>> DESCARGANDO datos "f"para {fecha_hoy}")
 
     async with async_playwright() as p:
 
-        new_page, browser, context = await carga_pagina(
-            p,
-            headless=True
-        )
-
+        new_page, browser, context = await carga_pagina(p,headless=True)
         try:
 
-            print("ejecutando venta diaria...")
-            await ventas(new_page, fecha_hoy)
+            print("decargando venta diaria...")
+            df_venta=await ventas_descarga(new_page, fecha_hoy)
 
-            print("ejecutando indicadores...")
-            await indicadores(new_page,fecha_hoy)
+            print("descargando indicadores...")
+            df_indicadores=await indicadores_descarga(new_page,fecha_hoy)
 
-            print("ejecutando combos por Clciente")
-            await combos_por_cliente(new_page, fecha_hoy)
+            print("descargando combos por Clciente")
+            df_combos=await combos_por_cliente_descarga(new_page, fecha_hoy)
 
             print("ejecuntando pedidos pmm...")
-            await fullfillment_pedidos(new_page, fecha_hoy)
+            df_pedidos=await fullfillment_pedidos_descarga(new_page, fecha_hoy)
 
-            print("ejecutando ito consolidado...")
-            await ito_consolidado(new_page, fecha_hoy)
+            print("descargando ito consolidado...")
+            df_ito_conso=await ito_consolidado_descarga(new_page, fecha_hoy)
 
-            print("ejecutando ito detallado...")
-            await ito_detallado(new_page, fecha_hoy)
+            print("descargando ito detallado...")
+            df_ito_detalle=await ito_detallado_descarga(new_page, fecha_hoy)
+
         finally:
-
             await browser.close()
+    print("\n>>> DESCARGA de archivos completa.")
+    
+    #subida de datos 
+    print("\n>>> CARGANDO datos en SQL...")
+    lista_reportes=[
+        {"carga_sql":ventas_carga_sql, "df":df_venta, "tabla":"POWERSTREET_Venta_Diaria"},
+        {"carga_sql":indicadores_carga_sql, "df":df_indicadores, "tabla":"POWERSTREET_Seguimiento_Indicadores"},
+        {"carga_sql":combos_por_cliente_carga_sql, "df":df_combos, "tabla":"POWERSTREET_Combos_Por_Cliente"},
+        {"carga_sql":fullfillment_pedidos_carga_sql, "df":df_pedidos, "tabla":"POWERSTREET_Fullfillment_Pedidos_PMM"},
+        {"carga_sql":ito_consolidado_carga_sql, "df":df_ito_conso, "tabla":"POWERSTREET_ITO_Consolidado"},
+        {"carga_sql":ito_detallado_carga_sql, "df":df_ito_detalle, "tabla":"POWERSTREET_ITO_Detallado"},
+    ]
+    for reporte in lista_reportes:
+        carga_sql = reporte["carga_sql"]
+        df = reporte["df"]
+        tabla = reporte["tabla"]
 
-#obtener la ultima fecha con registros en sql
-def obtener_ultima_fecha_sql():
+        if df is None or df.empty:
+            print(f"{tabla}: sin datos, continuando con el siguiente proceso...")
+            continue
+
+        print(f"Cargando {tabla} a SQL...")
+        carga_sql(df=df,schema=schema,tabla=tabla)
+        print("Datos cargados")
+
+    
+
+# obtener la ultima fecha con registros en sql
+def obtener_ultima_fecha_sql(schema:str):
 
     with motor.begin() as conn:
-
-        ultima_fecha_texto = text("""
+        ultima_fecha_texto = text(f"""
             SELECT MIN(Fecha_Maxima) AS Menor_Fecha_Reciente
             FROM (
                 SELECT MAX(Fecha) AS Fecha_Maxima
-                FROM PowerStreet.Venta_Diaria
+                FROM {schema}.POWERSTREET_Venta_Diaria
 
                 UNION ALL
 
                 SELECT MAX(Fecha) AS Fecha_Maxima
-                FROM PowerStreet.Seguimiento_Indicadores
+                FROM {schema}.POWERSTREET_Seguimiento_Indicadores
 
                 UNION ALL
 
                 SELECT MAX(Fecha) AS Fecha_Maxima
-                FROM PowerStreet.Combos_Por_Cliente
+                FROM {schema}.POWERSTREET_Combos_Por_Cliente
 
                 UNION ALL
 
                 SELECT MAX(Fecha) AS Fecha_Maxima
-                FROM PowerStreet.Fullfillment_Pedidos_PMM
+                FROM {schema}.POWERSTREET_Fullfillment_Pedidos_PMM
 
                 UNION ALL
 
                 SELECT MAX(Fecha) AS Fecha_Maxima
-                FROM PowerStreet.ITO_Consolidado
+                FROM {schema}.POWERSTREET_ITO_Consolidado
 
                 UNION ALL
 
                 SELECT MAX(Fecha) AS Fecha_Maxima
-                FROM PowerStreet.ITO_Detallado
+                FROM {schema}.POWERSTREET_ITO_Detallado
             ) AS fechas_maximas;
         """)
 
-        resultado = conn.execute(
-            ultima_fecha_texto
-        )
+        resultado = conn.execute(ultima_fecha_texto)
 
         return resultado.scalar()
     
 #ejecución del programa principal
 if __name__ == "__main__":
 
-    ultima_fecha_sql = obtener_ultima_fecha_sql()
+    ultima_fecha_sql = obtener_ultima_fecha_sql(schema=schema)
 
     print(
         f"La última fecha de registro en SQL fue el "

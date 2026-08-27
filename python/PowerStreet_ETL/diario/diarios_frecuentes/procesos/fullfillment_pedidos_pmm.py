@@ -15,9 +15,11 @@ from configuraciones.parametros import (desde_agencia, hasta_agencia)
 #-----------------------------
 #PROCESO
 #-----------------------------
-async def fullfillment_pedidos(new_page, fecha_hoy):
+async def fullfillment_pedidos_descarga(new_page, fecha_hoy):
+    await new_page.reload(wait_until="networkidle",timeout=240000)
+    await new_page.wait_for_timeout(1500)
     #abriendo busqueda rápida y buscandolo manualmente
-    print("obteniendo reporte ito al detalle...")
+    print("obteniendo reporte fullfillment de pedidos...")
     await new_page.click('div.quicksearch-btn')
     #Esperar a que aparezca la barra de búsqueda 
     await new_page.locator('input.search-box-text').wait_for(state='visible')
@@ -81,22 +83,26 @@ async def fullfillment_pedidos(new_page, fecha_hoy):
     shutil.copyfile(download_path, temp_path)
         
     # LEER EL ARCHIVO LIMPIO CON PANDAS
-    fullfillment = pd.read_excel(temp_path, engine="openpyxl")
-    print(f"Total de registros procesados: {len(fullfillment)}")
-    print(fullfillment.head())
+    df = pd.read_excel(temp_path, engine="openpyxl")
+    print(f"Total de registros procesados: {len(df)}")
+    print(df.head())
     
     #revisar si archivo esta vacio si es asi, terminar proceso
-    if fullfillment.empty:
+    if df.empty:
         print("Sin registros en este archivo. Proceso terminado.")
         return   
     print("transformando archivo")
     
     #TRANSFORMACIÓN DEL DF
     #llenar la columna fecha con la fecha de hoy
-    fullfillment['Fecha'] = pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
+    df['Fecha'] = pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
     #reemplazar todos los "" con nan
-    fullfillment = fullfillment.replace([""], np.nan)
-    
+    df = df.replace([""], np.nan)
+
+    df_final=df
+    return df_final
+
+def fullfillment_pedidos_carga_sql(df: pd.DataFrame, schema:str, tabla:str)-> None:
     #subir datos a SQL server 
-    subir_datos_a_sql(fullfillment,schema='PowerStreet', tabla='Fullfillment_Pedidos_PMM') 
-    
+    subir_datos_a_sql(df=df,schema=schema, tabla=tabla) 
+    print(f"datos cargado correctamente en " f"{schema}.{tabla}")

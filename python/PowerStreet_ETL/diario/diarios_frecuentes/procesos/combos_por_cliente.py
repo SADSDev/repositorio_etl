@@ -18,12 +18,16 @@ from configuraciones.parametros import (desde_agencia, hasta_agencia)
 #-----------------------------------
 #PROCESO
 #-----------------------------------
-async def combos_por_cliente(new_page,fecha_hoy):
+async def combos_por_cliente_descarga(new_page,fecha_hoy):
+
+    dataframes=[]
+    await new_page.reload(wait_until="networkidle",timeout=240000)
     for agencia in range(desde_agencia, hasta_agencia+1):
         #Ahora si, conseguir reportes:
         #tiempos y movimientos---------------------------------------------
         #abriendo busqueda rápida y buscandolo manualmente
         print(f"obteniendo reporte de combosXcliente de la agencia {agencia}")
+        await new_page.wait_for_timeout(1500)
         await new_page.click('div.quicksearch-btn')
         #Esperar a que aparezca la barra de búsqueda (opcional pero recomendable)
         await new_page.locator('input.search-box-text').wait_for(state='visible')
@@ -89,23 +93,33 @@ async def combos_por_cliente(new_page,fecha_hoy):
         shutil.copyfile(download_path, temp_path)
             
         # LEER EL ARCHIVO LIMPIO CON PANDAS
-        df = pd.read_excel(temp_path, engine="openpyxl")
-        print(f"Total de registros procesados: {len(df)}")
-        print(df.head())
+        df_i = pd.read_excel(temp_path, engine="openpyxl")
+        print(f"Total de registros procesados: {len(df_i)}")
+        print(df_i.head())
     
         print("transformando archivo y subiendo archivo...")        
         
         #revisar si archivo esta vacio si es asi, terminar proceso
-        if df.empty:
+        if df_i.empty:
             print("Sin combos registradas en este archivo. Proceso terminado.")
             return        
         
-        #Transformación del df
+        #Transformación del df_i
         #agregar columna Fecha
         fecha_hoy_date = datetime.strptime(fecha_hoy, "%d-%m-%Y").date()
-        df.insert(0, "Fecha", fecha_hoy_date)
+        df_i.insert(0, "Fecha", fecha_hoy_date)
+
+        dataframes.append(df_i)
+
+    if not dataframes:
+                return pd.DataFrame()
         
-        
-        
-        #subir datos a SQL server 
-        subir_datos_a_sql(df,schema='PowerStreet', tabla='Combos_Por_Cliente') 
+    df_final = pd.concat(dataframes, ignore_index=True)
+
+    return df_final
+    
+
+def combos_por_cliente_carga_sql(df: pd.DataFrame, schema:str, tabla:str)-> None:    
+    #subir datos a SQL server 
+    subir_datos_a_sql(df=df,schema=schema, tabla=tabla)
+    print(f"datos cargado correctamente en " f"{schema}.{tabla}") 

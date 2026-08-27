@@ -17,9 +17,11 @@ from configuraciones.parametros import (desde_agencia, hasta_agencia)
 #PROCESO
 #-----------------------------
 
-async def ito_detallado(new_page, fecha_hoy):
+async def ito_detallado_descarga(new_page, fecha_hoy):
     #abriendo busqueda rápida y buscandolo manualmente
     print("obteniendo reporte ito al detalle...")
+    await new_page.reload(wait_until="networkidle",timeout=240000)
+    await new_page.wait_for_timeout(1500)
     await new_page.click('div.quicksearch-btn')
     #Esperar a que aparezca la barra de búsqueda 
     await new_page.locator('input.search-box-text').wait_for(state='visible')
@@ -27,8 +29,12 @@ async def ito_detallado(new_page, fecha_hoy):
     await new_page.locator('input.search-box-text').fill("Reporte Cobertura ITO % Geocerca Detalle")
     #Esperar que aparezcan resultados en el contenedor
     await new_page.locator('div.search-box-results').wait_for(state='visible')
-    #Dar clic al primer resultado con tabindex="0"
-    await new_page.locator('div.searchbox-item[tabindex="0"]').click()
+    #Dar clic al resultado con texto exacto buscado
+    await new_page.locator(
+        'div.search-box-results > div.searchbox-item'
+    ).filter(
+        has_text="Reporte Cobertura ITO % Geocerca Detalle"
+    ).first.click()
     
 
     #esperar ventana "propiedades"
@@ -87,21 +93,26 @@ async def ito_detallado(new_page, fecha_hoy):
     shutil.copyfile(download_path, temp_path)
         
     # LEER EL ARCHIVO LIMPIO CON PANDAS
-    itodetallado = pd.read_excel(temp_path, engine="openpyxl")
-    print(f"Total de registros procesados: {len(itodetallado)}")
-    print(itodetallado.head())
+    df = pd.read_excel(temp_path, engine="openpyxl")
+    print(f"Total de registros procesados: {len(df)}")
+    print(df.head())
     
     #revisar si archivo esta vacio si es asi, terminar proceso
-    if itodetallado.empty:
+    if df.empty:
         print("Sin registros en este archivo. Proceso terminado.")
         return   
     print("transformando archivo")
     
     #TRANSFORMACIÓN DEL DF
     #llenar lacolumna Dia con la fecha de hoy
-    itodetallado['Dia'] = pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
+    df['Dia'] = pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
     #LLENAR ESPACIOS EN BLANCO Y "SIN VISITA" CON NULLS
-    itodetallado = itodetallado.replace(["", "SIN VISITA"], np.nan)
-    
+    df = df.replace(["", "SIN VISITA"], np.nan)
+
+    df_final=df
+    return df_final
+
+def ito_detallado_carga_sql(df: pd.DataFrame, schema:str, tabla:str)-> None:
     #subir datos a SQL server 
-    subir_datos_a_sql(itodetallado,schema='PowerStreet', tabla='ITO_Detallado')
+    subir_datos_a_sql(df=df,schema=schema, tabla=tabla)
+    print(f"datos cargado correctamente en " f"{schema}.{tabla}")

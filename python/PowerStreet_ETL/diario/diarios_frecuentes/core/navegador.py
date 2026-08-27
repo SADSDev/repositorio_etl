@@ -74,17 +74,15 @@ async def carga_pagina(p, headless=True):
                     return canvas.toDataURL('image/png').split(',')[1];
                 }
                 """)
-            with open("captcha.png", "wb") as f:
-                f.write(base64.b64decode(img_base64))
-  
-            img = cv2.imread("captcha.png")
+            img_bytes = base64.b64decode(img_base64)
+            img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+            img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
             if img is None:
                 print("Imagen vacía")
                 continue
-
             print("Captcha descargado correctamente")
-            #limpieza de la imagen
-            img = cv2.imread("captcha.png")
+            # limpieza de la imagen
             # Convierte la imagen a escala de grises
             gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             # Aplicar un umbral para obtener solo los tonos de negro (y gris)
@@ -102,8 +100,7 @@ async def carga_pagina(p, headless=True):
             # Aumentar el brillo en un 150%
             beta = 150  # Valor de brillo (150 para +150%)
             imagen_brillo = cv2.convertScaleAbs(imagen_contraste, alpha=1.0, beta=beta)
-            cv2.imwrite("captcha.png", imagen_brillo)
-            resultado = ocr.ocr('captcha.png')
+            resultado = ocr.ocr(imagen_brillo)
             if resultado and resultado[0]: #SI EL RESULTADO NO ESTÁ VACIO
                 captchaResult = "".join([linea[1][0] for linea in resultado[0]])
                 print(captchaResult)

@@ -19,12 +19,16 @@ from configuraciones.parametros import desde_agencia, hasta_agencia
 #-----------------------------------
 #PROCESO
 #-----------------------------------
-async def indicadores(new_page,fecha_hoy):
+async def indicadores_descarga(new_page,fecha_hoy):
+
+    dataframes=[]
+    await new_page.reload(wait_until="networkidle",timeout=240000)
     for agencia in range(desde_agencia, hasta_agencia+1):
         #Ahora si, conseguir reportes:
         #tiempos y movimientos---------------------------------------------
         #abriendo busqueda rápida y buscandolo manualmente
         print(f"obteniendo reporte de indicadores de la agencia {agencia}")
+        await new_page.wait_for_timeout(1500)
         await new_page.click('div.quicksearch-btn')
         #Esperar a que aparezca la barra de búsqueda (opcional pero recomendable)
         await new_page.locator('input.search-box-text').wait_for(state='visible')
@@ -97,26 +101,37 @@ async def indicadores(new_page,fecha_hoy):
         shutil.copyfile(download_path, temp_path)
 
         # LEER EL ARCHIVO LIMPIO CON PANDAS
-        df = pd.read_csv(temp_path, encoding="utf-8-sig")
-        print(df.head(10))
+        df_i = pd.read_csv(temp_path, encoding="utf-8-sig")
+        print(df_i.head(10))
         print("transformando archivo y subiendo archivo...")        
         
         #revisar si archivo esta vacio si es asi, terminar proceso
-        if df.empty:
+        if df_i.empty:
             print(f"sin registros de indicadores en la agencia {agencia}, pasando a la sig...")
             continue        
         
-        #TRANSFORMACION DEL DF
+        #TRANSFORMACION DEL df_i
         #agregar columna Fecha y colocarla después de Agencia
-        df['Fecha']=pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
-        columnas=df.columns.to_list()
+        df_i['Fecha']=pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
+        columnas=df_i.columns.to_list()
         indice_fecha= columnas.index('Agencia')
         columnas.insert(indice_fecha + 1,columnas.pop(columnas.index('Fecha')))
-        df=df[columnas]
+        df_i=df_i[columnas]
         #redondear todas las columnas numericas
-        cols_num = df.select_dtypes(include="number").columns
-        df[cols_num] = df[cols_num].round(2)
+        cols_num = df_i.select_dtypes(include="number").columns
+        df_i[cols_num] = df_i[cols_num].round(4)
      
+        dataframes.append(df_i)
+
+    if not dataframes:
+            return pd.DataFrame()
+    
+    df_final = pd.concat(dataframes, ignore_index=True)
+
+    return df_final
+
+def indicadores_carga_sql(df: pd.DataFrame, schema:str, tabla:str)-> None:
         
         #subir datos a SQL server 
-        subir_datos_a_sql(df,schema='PowerStreet', tabla='Seguimiento_Indicadores')
+        subir_datos_a_sql(df=df,schema=schema, tabla=tabla)
+        print(f"datos cargado correctamente en " f"{schema}.{tabla}")

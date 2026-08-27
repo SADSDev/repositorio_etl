@@ -17,10 +17,12 @@ from core.subirDatosSQL import subir_datos_a_sql
 #-----------------
 #proceso de reportes de venta diaria
 #----------------
-async def ventas(new_page, fecha_hoy):    
+async def ventas_descarga(new_page, fecha_hoy):    
     #Ahora si, conseguir reportes:
     #abriendo busqueda rápida y buscandolo manualmente
     print("obteniendo reporte de venta diaria...")
+    await new_page.reload(wait_until="networkidle",timeout=240000)
+    await new_page.wait_for_timeout(1500)
     await new_page.click('div.quicksearch-btn')
     #Esperar a que aparezca la barra de búsqueda (opcional pero recomendable)
     await new_page.locator('input.search-box-text').wait_for(state='visible')
@@ -45,7 +47,6 @@ async def ventas(new_page, fecha_hoy):
     
     #esperar ventana "Parámetros" y llenarla
     await new_page.wait_for_selector('ui-window[visible="true"]', timeout=30000)
-    await new_page.screenshot(path="debug_hoy.png")
     await new_page.fill('input[id$="_pValue_DFecha_element"]', "")  # limpiar
     await new_page.fill('input[id$="_pValue_DFecha_element"]', str(fecha_hoy))  # valor dinámico o fijo
     await new_page.fill('input[id$="_pValue_HFecha_element"]', "")  # limpiar
@@ -91,7 +92,11 @@ async def ventas(new_page, fecha_hoy):
     #redondear datos numericos
     df["Cantidad"]=df["Cantidad"].round(3)
     df["Total"]=df["Total"].round(3)
+
+    df_final=df
+    return df_final
     
-    
+def ventas_carga_sql(df: pd.DataFrame, schema:str, tabla:str)-> None:
     #subir datos a SQL server 
-    subir_datos_a_sql(df,schema='PowerStreet', tabla='Venta_Diaria')
+    subir_datos_a_sql(df=df,schema=schema, tabla=tabla)
+    print(f"datos cargado correctamente en " f"{schema}.{tabla}")
