@@ -39,23 +39,18 @@ def subir_datos_a_sql(df: pd.DataFrame,
         df.columns = sql_columns#renombrar columnas para que sean iguales a las del df
         print("✅ Columnas renombradas correctamente:")
 
-        # eliminar duplicados por fecha/ruta
+        # eliminar duplicados por fecha
         fecha_df = pd.to_datetime(df["Fecha"].iloc[0], dayfirst=True).date()
-        nur = str(df["NUR"].iloc[0]).strip().upper()
-
-        clave_nur = re.sub(r"[A-Z]\d+$", "", nur)
-
+    
         sql_delete = text(f"""
             DELETE FROM {schema}.{tabla}
             WHERE CONVERT(date, Fecha) = :Fecha
-            AND NUR LIKE '%' + :nur + '%'
         """)
 
         conn.execute(
             sql_delete,
             {
-                "Fecha": fecha_df,
-                "nur": clave_nur
+                "Fecha": fecha_df
             }
         )
         print(f"✅ Registros con fecha {fecha_df} eliminados")
