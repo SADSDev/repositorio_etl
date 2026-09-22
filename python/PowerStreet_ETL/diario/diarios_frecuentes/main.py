@@ -32,6 +32,9 @@ from procesos.ito_consolidado import(
 from procesos.ito_detallado import(
     ito_detallado_descarga, ito_detallado_carga_sql
 )
+from procesos.pdv_por_agencia import(
+    pdv_agencia_descarga, pdv_agencia_carga_sql
+)
 #-----------------------------------
 #PROCESO
 #-----------------------------------
@@ -46,23 +49,26 @@ async def main(fecha_hoy):
         new_page, browser, context = await carga_pagina(p,headless=True)
         try:
 
-            print("decargando venta diaria...")
-            df_venta=await ventas_descarga(new_page, fecha_hoy)
+            #print("decargando venta diaria...")
+            #df_venta=await ventas_descarga(new_page, fecha_hoy)
 
-            print("descargando indicadores...")
-            df_indicadores=await indicadores_descarga(new_page,fecha_hoy)
+            #print("descargando indicadores...")
+            #df_indicadores=await indicadores_descarga(new_page,fecha_hoy)
 
-            print("descargando combos por Clciente")
-            df_combos=await combos_por_cliente_descarga(new_page, fecha_hoy)
+            #print("descargando combos por Clciente")
+            #df_combos=await combos_por_cliente_descarga(new_page, fecha_hoy)
 
-            print("ejecuntando pedidos pmm...")
-            df_pedidos=await fullfillment_pedidos_descarga(new_page, fecha_hoy)
+            #print("ejecuntando pedidos pmm...")
+            #df_pedidos=await fullfillment_pedidos_descarga(new_page, fecha_hoy)
 
-            print("descargando ito consolidado...")
-            df_ito_conso=await ito_consolidado_descarga(new_page, fecha_hoy)
+            #print("descargando ito consolidado...")
+            #df_ito_conso=await ito_consolidado_descarga(new_page, fecha_hoy)
 
-            print("descargando ito detallado...")
-            df_ito_detalle=await ito_detallado_descarga(new_page, fecha_hoy)
+            #print("descargando ito detallado...")
+            #df_ito_detalle=await ito_detallado_descarga(new_page, fecha_hoy)
+
+            print("descargado pdv por agencia...")
+            df_pdv_agencia=await pdv_agencia_descarga(new_page, fecha_hoy)
 
         finally:
             await browser.close()
@@ -71,12 +77,13 @@ async def main(fecha_hoy):
     #subida de datos 
     print("\n>>> CARGANDO datos en SQL...")
     lista_reportes=[
-        {"carga_sql":ventas_carga_sql, "df":df_venta, "tabla":"POWERSTREET_Venta_Diaria"},
-        {"carga_sql":indicadores_carga_sql, "df":df_indicadores, "tabla":"POWERSTREET_Seguimiento_Indicadores"},
-        {"carga_sql":combos_por_cliente_carga_sql, "df":df_combos, "tabla":"POWERSTREET_Combos_Por_Cliente"},
-        {"carga_sql":fullfillment_pedidos_carga_sql, "df":df_pedidos, "tabla":"POWERSTREET_Fullfillment_Pedidos_PMM"},
-        {"carga_sql":ito_consolidado_carga_sql, "df":df_ito_conso, "tabla":"POWERSTREET_ITO_Consolidado"},
-        {"carga_sql":ito_detallado_carga_sql, "df":df_ito_detalle, "tabla":"POWERSTREET_ITO_Detallado"},
+        #{"carga_sql":ventas_carga_sql, "df":df_venta, "tabla":"POWERSTREET_Venta_Diaria"},
+        #{"carga_sql":indicadores_carga_sql, "df":df_indicadores, "tabla":"POWERSTREET_Seguimiento_Indicadores"},
+        #{"carga_sql":combos_por_cliente_carga_sql, "df":df_combos, "tabla":"POWERSTREET_Combos_Por_Cliente"},
+        #{"carga_sql":fullfillment_pedidos_carga_sql, "df":df_pedidos, "tabla":"POWERSTREET_Fullfillment_Pedidos_PMM"},
+        #{"carga_sql":ito_consolidado_carga_sql, "df":df_ito_conso, "tabla":"POWERSTREET_ITO_Consolidado"},
+        #{"carga_sql":ito_detallado_carga_sql, "df":df_ito_detalle, "tabla":"POWERSTREET_ITO_Detallado"},
+        {"carga_sql":pdv_agencia_carga_sql, "df":df_pdv_agencia, "tabla":"POWERSTREET_PDV_PorAgencia"}
     ]
     for reporte in lista_reportes:
         carga_sql = reporte["carga_sql"]
@@ -127,6 +134,12 @@ def obtener_ultima_fecha_sql(schema:str):
 
                 SELECT MAX(Fecha) AS Fecha_Maxima
                 FROM {schema}.POWERSTREET_ITO_Detallado
+
+                UNION ALL
+
+                SELECT MAX(Fecha) AS Fecha_Maxima
+                FROM {schema}.POWERSTREET_PDV_PorAgencia
+                
             ) AS fechas_maximas;
         """)
 

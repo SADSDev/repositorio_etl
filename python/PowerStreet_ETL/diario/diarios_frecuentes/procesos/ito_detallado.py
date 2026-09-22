@@ -26,7 +26,7 @@ async def ito_detallado_descarga(new_page, fecha_hoy):
     #Esperar a que aparezca la barra de búsqueda 
     await new_page.locator('input.search-box-text').wait_for(state='visible')
     #Escribir el nombre del reporte
-    await new_page.locator('input.search-box-text').fill("Reporte Cobertura ITO % Geocerca Detalle")
+    await new_page.locator('input.search-box-text').fill("Reporte Cobertura ITO % Geocerca Detalle V2")
     #Esperar que aparezcan resultados en el contenedor
     await new_page.locator('div.search-box-results').wait_for(state='visible')
     #Dar clic al resultado con texto exacto buscado

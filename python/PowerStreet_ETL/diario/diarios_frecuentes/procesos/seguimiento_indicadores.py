@@ -14,7 +14,7 @@ from sqlalchemy import text
 #IMPORTS
 #----------------------------------------
 from core.subirDatosSQL import subir_datos_a_sql
-from configuraciones.parametros import desde_agencia, hasta_agencia
+from configuraciones.parametros import agencias
 
 #-----------------------------------
 #PROCESO
@@ -23,7 +23,7 @@ async def indicadores_descarga(new_page,fecha_hoy):
 
     dataframes=[]
     await new_page.reload(wait_until="networkidle",timeout=240000)
-    for agencia in range(desde_agencia, hasta_agencia+1):
+    for agencia in agencias:
         #Ahora si, conseguir reportes:
         #tiempos y movimientos---------------------------------------------
         #abriendo busqueda rápida y buscandolo manualmente

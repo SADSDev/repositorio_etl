@@ -40,6 +40,17 @@ try:
     desde_agencia = int(variable_obligatoria("DESDEAGENCIA"))
     hasta_agencia = int(variable_obligatoria("HASTAAGENCIA"))
 
+    excluir_agencias = [
+        int(x) for x in os.getenv("EXCLUIR_AGENCIAS", "").split(",")
+        if x.strip()
+    ]
+
+    agencias = [
+        agencia
+        for agencia in range(desde_agencia, hasta_agencia + 1)
+        if agencia not in excluir_agencias
+    ]
+
 except ValueError as error:
     raise RuntimeError(
         "DESDEAGENCIA y HASTAAGENCIA deben ser números enteros."
