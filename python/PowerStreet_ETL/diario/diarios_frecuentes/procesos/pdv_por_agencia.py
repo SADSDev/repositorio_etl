@@ -100,12 +100,11 @@ async def pdv_agencia_descarga(new_page,fecha_hoy):
         if df_i.empty:
             print(f"sin registros de indicadores en la agencia {agencia}, pasando a la sig...")
             continue        
-        
+
         #TRANSFORMACION DEL df_i
         #Asegurar columnas de tipo tiempo en formato de tiempo
         df_i["Fecha"] = pd.to_datetime(
             df_i["Fecha"],
-            dayfirst=True,
             errors="coerce"
         ).dt.date
         for columna in [
