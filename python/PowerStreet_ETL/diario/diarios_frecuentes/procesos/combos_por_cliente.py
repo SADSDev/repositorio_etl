@@ -14,7 +14,7 @@ from sqlalchemy import text
 #----------------------------------------
 from core.subirDatosSQL import subir_datos_a_sql
 from configuraciones.conexion_sql import motor
-from configuraciones.parametros import (desde_agencia, hasta_agencia)
+from configuraciones.parametros import agencias
 #-----------------------------------
 #PROCESO
 #-----------------------------------
@@ -22,10 +22,10 @@ async def combos_por_cliente_descarga(new_page,fecha_hoy):
 
     dataframes=[]
     await new_page.reload(wait_until="networkidle",timeout=240000)
-    for agencia in range(desde_agencia, hasta_agencia+1):
+    for agencia in agencias:
         #Ahora si, conseguir reportes:
         #tiempos y movimientos---------------------------------------------
-        #abriendo busqueda rápida y buscandolo manualmente
+        #abriendo busqueda  rápida y buscandolo manualmente
         print(f"obteniendo reporte de combosXcliente de la agencia {agencia}")
         await new_page.wait_for_timeout(1500)
         await new_page.click('div.quicksearch-btn')
@@ -52,6 +52,10 @@ async def combos_por_cliente_descarga(new_page,fecha_hoy):
         await new_page.fill('input[id$="__variable_1_element"]', "")
         await new_page.fill('input[id$="__variable_1_element"]', "666126")
         await new_page.wait_for_timeout(1500)
+
+        await new_page.fill('input[id$="__variable_2_element"]', "")
+        await new_page.fill('input[id$="__variable_2_element"]', str(agencia))
+        await new_page.wait_for_timeout(1500)
         
         await new_page.fill('input[id$="__variable_3_element"]', "")
         await new_page.fill('input[id$="__variable_3_element"]', str(fecha_hoy))
@@ -59,9 +63,6 @@ async def combos_por_cliente_descarga(new_page,fecha_hoy):
         await new_page.fill('input[id$="__variable_4_element"]', "")
         await new_page.fill('input[id$="__variable_4_element"]', str(fecha_hoy))
         
-        await new_page.fill('input[id$="__variable_2_element"]', "")
-        await new_page.fill('input[id$="__variable_2_element"]', "8")
-        await new_page.wait_for_timeout(1500)
         
         #hacer click en boton para ver el reporte
         await new_page.get_by_role("button", name="Ver").click()
