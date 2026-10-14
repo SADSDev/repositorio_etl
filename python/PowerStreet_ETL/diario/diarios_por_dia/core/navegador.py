@@ -4,6 +4,7 @@
 import base64
 import cv2
 import numpy as np
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 
 from paddleocr import PaddleOCR
