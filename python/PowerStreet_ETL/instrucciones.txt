@@ -1,7 +1,21 @@
-﻿INSTRUCCIONES DE INSTALACIÓN
+﻿****Notas IMPORTANTES (requisitos de pre-instalación)****
+⚠️Es necesario tener Python versión 3.12.x  en el equipo, ya que hay librerias que solo son compatibles con esta versión
+
+⚠️Red Wi-Fi requerida durante la instalación y ejecución de los programas.
+
+⚠️programa(s) ETL debe(n) ser ejecutado(s) vía el CMD, PowerShell o tareas programadas pues
+   Playwright requiere un entorno con consola y navegador.
+
+⚠️Componente "Microsoft Visual C++ Redistruable x64" necesario para el funcionamiento de la Liberia Playwright se instala aparte de forma manual mediante: https://aka.ms/vc14/vc_redist.x64.exe
+
+⚠️ "pyodbc" (librería de Python de conexión a SQL Server) requiere que el
+   "ODBC Driver de SQL Server" esté instalado en Windows. Este componente también se instala de forma manual mediante: https://download.microsoft.com/download/d624e1c6-293b-4d6f-91b8-6e515a5d6a77/amd64/1033/msodbcsql.msi
+
+
+****INSTRUCCIONES DE INSTALACIÓN****
 1.-Copiar la carpeta del proyecto en ubicación de preferencia
 
-2.-Abrir CMD (de preferencia con permisos de administrador), escribir y ejecutar linea por linea:
+2.-Abrir CMD o Powershell (de preferencia con permisos de administrador), escribir y ejecutar linea por linea:
 	2.1: Cd + "ruta de la ubicación de carpeta"
 	ejemplo: cd "C:\One_Drive_Edson\OneDrive - Universidad Autonoma de Nuevo León\EDSON\SODISA\Python\PowerStreet_ETL"
 
@@ -9,17 +23,3 @@
 
 3.-Listo, ya puedes programar la tarea en Windows de los programas ETL para su ejecución diaria/mensual/semanal
 Los programas schedulables son aquellos de nomenclatura: "powerstreet_..."
-
-
-
-****Notas IMPORTANTES (nivel producción)****
-⚠️Red Wi-Fi requerida durante la instalación y ejecución de los programas.
-
-⚠️programa(s) ETL debe(n) ser ejecutado(s) via el CMD, PowerShell o tareas programadas pues
-   Playwright requiere un entorno con consola y navegador.
-
-⚠️Es necesario tener Python versión 3.12.x  en el equipo, ya que hay librerias que solo son compatibles con esta versión
-
-⚠️ pyodbc (librería de Python para conexión a SQL Server) requiere que el
-   ODBC Driver de SQL Server esté instalado en Windows. Este componente NO se
-   instala mediante pip.
