@@ -11,10 +11,7 @@ from playwright.async_api import Page
 #------------------------
 #IMPORTS
 #------------------------
-from configuraciones.parametros import (
-    desde_agencia,
-    hasta_agencia
-)
+from configuraciones.parametros import agencias
 
 from core.normalizacion_texto import normalizar_texto
 from core.subirDatosSQL import subir_datos_a_sql
@@ -31,7 +28,7 @@ async def libros_descarga(
 
 
     dataframes = []
-    for agencia in range(desde_agencia, hasta_agencia+1):
+    for agencia in (agencias):
         print(f"obteniendo Libro de rutas de agencia {agencia}")
         #Ahora si, conseguir reportes:
         #libros---------------------------------------------
@@ -45,6 +42,7 @@ async def libros_descarga(
         #Esperar que aparezcan resultados en el contenedors
         await new_page.locator('div.search-box-results').wait_for(state='visible')
         #Dar clic al primer resultado con tabindex="0"
+        await new_page.wait_for_timeout(1500)#espera 1.5 segundo
         await new_page.locator('div.searchbox-item[tabindex="0"]').click()
         
         #esperar ventana "propiedades"
@@ -152,8 +150,6 @@ async def libros_descarga(
         )
 
         print("Archivo obtenido!!")
-        print(df_i.head())
-
         print("transformando archivo y subiendo archivo")
         
         #TRANSFORMACION DEL df_i
@@ -161,19 +157,24 @@ async def libros_descarga(
         df_i = df_i.dropna(axis=1, how="all")
         # Convierte cadenas vacías o con solo espacios a NaN
         df_i = df_i.replace(r'^\s*$', np.nan, regex=True)
+        #pasa primer fila como titulos de columnas
         titulos = [str(i) for i in range(len(df_i.columns))]
         df_i.columns=titulos
         #agregar columna de fecha de actualizacion y colocarla después de Orden
         df_i.insert(4, "Fecha_Actualizacion", pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce'))
+        #agregar columna de agencia y agregarla como primer columna
+        df_i.insert(0, "Agencia", agencia)
         
-
+        print(df_i.head())
         dataframes.append(df_i)
 
     if not dataframes:
         return pd.DataFrame()
 
+    
     df_final = pd.concat(dataframes, ignore_index=True)
 
+    #df_final.to_excel("libro_rutas.xlsx", index=False)
     return df_final
 
 def libros_carga_sql(
@@ -188,8 +189,6 @@ def libros_carga_sql(
             "No se vaciará ni cargará la tabla."
         )
 
-    # El vaciado ocurre en la fase de carga,
-    # nunca durante la descarga.
     vaciar_tabla_sql(schema=schema, tabla=tabla)
 
     subir_datos_a_sql(df=df, schema=schema, tabla=tabla)
