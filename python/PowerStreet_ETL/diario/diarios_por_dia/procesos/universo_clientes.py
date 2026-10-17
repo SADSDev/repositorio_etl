@@ -10,10 +10,7 @@ from playwright.async_api import Page
 #------------------------
 #IMPORTS
 #------------------------
-from configuraciones.parametros import (
-    desde_agencia,
-    hasta_agencia
-)
+from configuraciones.parametros import agencias
 
 from core.subirDatosSQL import subir_datos_a_sql
 from core.vaciarTablaSQL import vaciar_tabla_sql
@@ -28,7 +25,7 @@ async def universo_descarga(
 ):
 
     dataframes=[]
-    for agencia in range(desde_agencia, hasta_agencia+1):
+    for agencia in (agencias):
         print(f"obteniendo universo de agencia {agencia}")
         #abriendo busqueda rápida y buscandolo manualmente
         await new_page.click('div.quicksearch-btn')
@@ -39,6 +36,7 @@ async def universo_descarga(
         #Esperar que aparezcan resultados en el contenedors
         await new_page.locator('div.search-box-results').wait_for(state='visible')
         #Dar clic al primer resultado con tabindex="0"
+        await new_page.wait_for_timeout(1500)#espera 1.5 segundo
         await new_page.locator('div.searchbox-item[tabindex="0"]').click()
         
         #esperar ventana "propiedades"
@@ -53,38 +51,34 @@ async def universo_descarga(
         # Llenar campo Agencia (input tipo number)
         await new_page.fill('input[id$="__variable_2_element"]', "")  # limpiarpiar
         await new_page.fill('input[id$="__variable_2_element"]', str(agencia))  # valor fijo
-        await new_page.wait_for_timeout(2000)#espera 1 segundo
+        await new_page.wait_for_timeout(2000)#espera 1.5 segundos
         await new_page.keyboard.press("Tab")
-        
         #hacer click en boton para ver el reporte
         await new_page.get_by_role("button", name="Ver").click()
-        
-        #esperar la ventana del reporte para descargar
+
+        # 1. Esperar el contenedor del reporte
+        contenedor = new_page.locator('ui-window:has(.ui-window-title:text("Universo de clientes Excel"))')
+        await contenedor.wait_for(state="visible", timeout=30_000)
+        # 2. Acceder al iframe
         iframe_element = await new_page.wait_for_selector('iframe[id*="reportView"]')
         frame = await iframe_element.content_frame()
+        # 3. Esperar el botón Generar Archivo
         boton = frame.locator('button:has-text("Generar Archivo")')
-        await boton.wait_for(state='visible', timeout=30000)
+        await boton.wait_for(state="visible", timeout=30_000)
         await boton.scroll_into_view_if_needed()
         await boton.hover()
-        print("datos totalmente cargados, listo para descargar")
-
-        
-        # Esperar la descarga
-        async with new_page.expect_download(timeout=600_000) as download_info:
-            print("Obteniendo archivo, este podría tardar varios minutos...")
+        print("datos totalmente cargados, listo para descargar") 
+        # 4. Esperar 1.5 segundos
+        await new_page.wait_for_timeout(1500)
+        # 5. Generar y descargar el archivo
+        async with new_page.expect_download(timeout=800_000) as download_info:
             await new_page.wait_for_timeout(1500)#espera 1.5 segundos
             await boton.click()
-
+            print("Obteniendo archivo, este podría tardar varios minutos...")
         download = await download_info.value
-
-        #Obtener la ruta del archivo descargado por Playwright
         download_path = await download.path()
-        
-        #cerrar ui-window-bar
-        await new_page.wait_for_timeout(1000)
-        await new_page.locator('.ui-window-bar .ui-window-button-close').click()#ya está visible desde que se ejecutó la descarga, no es necesario esperarlo
-        await new_page.reload()
-        await new_page.wait_for_load_state("networkidle", timeout=240000)
+        print(f"Reporte descargado: {download_path}")
+            
 
         # Leer el archivo con pandas
         df_i = pd.read_csv(download_path, sep='\t', encoding='utf-8')
@@ -113,6 +107,14 @@ async def universo_descarga(
                 .drop_duplicates("Codigo GLN", keep="first")
                 .drop(columns="score") )
         dataframes.append(df_i)
+
+        # 6. Cerrar el contenedor y recargar página
+        await contenedor.locator(
+            ".ui-window-button-close"
+        ).click()
+        await new_page.reload()
+        await new_page.wait_for_load_state("networkidle", timeout=240000)
+
 
     if not dataframes:
         return pd.DataFrame()
