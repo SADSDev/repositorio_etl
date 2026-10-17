@@ -29,9 +29,8 @@ from procesos.universo_clientes import (
 #-----------------------------------
 
 async def main(fecha_hoy):
-
+    #descarga de datos de PowerStreet
     print(f"\n>>> DESCARGANDO datos "f"para {fecha_hoy}")
-
     async with async_playwright() as p:
         new_page, browser, context = await carga_pagina(p,headless=True)
         try:
@@ -43,16 +42,12 @@ async def main(fecha_hoy):
             df_universo = await universo_descarga(new_page,fecha_hoy)
         finally:
             await browser.close()
-
     print("\n>>> DESCARGA de archivos completa.")
 
+    #carga de datos a SQL
     print("\n>>> CARGANDO datos en SQL...")
-
-    # Estas funciones se ejecutan solamente
-    # después de terminar todas las descargas.
     libros_carga_sql(df=df_libros,schema=schema,tabla="POWERSTREET_Libros")
     universo_carga_sql(df=df_universo,schema=schema,tabla="POWERSTREET_Universo_Clientes")
-
     print("\n>>> CARGA terminada correctamente.")
 
 
