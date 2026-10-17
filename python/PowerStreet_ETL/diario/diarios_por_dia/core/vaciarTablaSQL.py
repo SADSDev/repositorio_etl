@@ -17,7 +17,7 @@ from configuraciones.conexion_sql import motor
 def vaciar_tabla_sql(schema: str, tabla: str):
     with motor.begin() as conn:
         conn.execute(text(f"""
-            TRUNCATE TABLE {schema}.{tabla}
+            DELETE FROM {schema}.{tabla}
         """))
 
     print(f"✅ Tabla {schema}.{tabla} vaciada.")
