@@ -1,5 +1,6 @@
 CREATE TABLE PowerStreet.Libros
 (
+    Agencia       INT          NOT NULL,
     Vendedor      VARCHAR(30)  NULL,
     Cliente       VARCHAR(30)  NOT NULL,
     Frecuencia    VARCHAR(5)   NULL,
