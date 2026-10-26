@@ -151,7 +151,6 @@ async def libros_descarga(
 
         print("Archivo obtenido!!")
         print("transformando archivo y subiendo archivo")
-        
         #TRANSFORMACION DEL df_i
         #eliminar columnas "unnamed"
         df_i = df_i.dropna(axis=1, how="all")
@@ -160,8 +159,6 @@ async def libros_descarga(
         #pasa primer fila como titulos de columnas
         titulos = [str(i) for i in range(len(df_i.columns))]
         df_i.columns=titulos
-        #agregar columna de fecha de actualizacion y colocarla después de Orden
-        df_i.insert(4, "Fecha_Actualizacion", pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce'))
         #agregar columna de agencia y agregarla como primer columna
         df_i.insert(0, "Agencia", agencia)
         
