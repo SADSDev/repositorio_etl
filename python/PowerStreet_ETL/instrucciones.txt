@@ -15,9 +15,9 @@
 ****INSTRUCCIONES DE INSTALACIÓN****
 1.-Copiar la carpeta del proyecto en ubicación de preferencia
 
-2.-Abrir CMD o Powershell (de preferencia con permisos de administrador), escribir y ejecutar linea por linea:
-	2.1: Cd + "ruta de la ubicación de carpeta"
-	ejemplo: cd "C:\One_Drive_Edson\OneDrive - Universidad Autonoma de Nuevo León\EDSON\SODISA\Python\PowerStreet_ETL"
+2.-Abrir CMD o Powershell (de preferencia con permisos de administrador), activar .venv, escribir y ejecutar linea por linea:
+	2.1: Cd + "ruta de la ubicación de carpeta de set_up_primera_vez"
+	ejemplo: cd "C:\One_Drive_Edson\OneDrive - Universidad Autonoma de Nuevo León\EDSON\SODISA\Python\PowerStreet_ETL\set_up_primera_vez"
 
 	2.2: python set_up.py
 
