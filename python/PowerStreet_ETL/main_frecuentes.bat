@@ -10,4 +10,4 @@ for /d %%D in (*venv*) do (
 :venv_activado
 python diario/diarios_frecuentes/main.py
 
-pause
+exit
