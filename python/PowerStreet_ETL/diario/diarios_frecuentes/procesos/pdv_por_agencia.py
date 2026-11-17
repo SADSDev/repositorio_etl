@@ -10,8 +10,8 @@ from datetime import datetime
 #----------------------------------------
 #IMPORTS
 #----------------------------------------
-from core.subirDatosSQL import subir_datos_a_sql
-from configuraciones.parametros import agencias
+from PowerStreet_ETL.diario.diarios_frecuentes.core.subirDatosSQL import subir_datos_a_sql
+from PowerStreet_ETL.configuraciones.parametros import agencias
 
 #-----------------------------------
 #PROCESO
@@ -94,7 +94,7 @@ async def pdv_agencia_descarga(new_page,fecha_hoy):
         # LEER EL ARCHIVO LIMPIO CON PANDAS
         df_i = pd.read_excel(temp_path, engine="openpyxl")
         print(df_i.head(10))
-        print("transformando archivo y subiendo archivo...")        
+        print("transformando archivo...")        
         
         #revisar si archivo esta vacio si es asi, terminar proceso
         if df_i.empty:
@@ -118,6 +118,8 @@ async def pdv_agencia_descarga(new_page,fecha_hoy):
         #redondear todas las columnas numericas
         cols_num = df_i.select_dtypes(include="number").columns
         df_i[cols_num] = df_i[cols_num].round(4)
+        #agregar columna de FechaCarga
+        df_i["FechaCarga"] = pd.Timestamp.now()
      
         dataframes.append(df_i)
 

@@ -12,9 +12,9 @@ from sqlalchemy import text
 #----------------------------------------
 #IMPORTS
 #----------------------------------------
-from core.subirDatosSQL import subir_datos_a_sql
-from configuraciones.conexion_sql import motor
-from configuraciones.parametros import agencias
+from PowerStreet_ETL.diario.diarios_frecuentes.core.subirDatosSQL import subir_datos_a_sql
+from PowerStreet_ETL.configuraciones.conexion_sql import motor
+from PowerStreet_ETL.configuraciones.parametros import agencias
 #-----------------------------------
 #PROCESO
 #-----------------------------------
@@ -98,7 +98,7 @@ async def combos_por_cliente_descarga(new_page,fecha_hoy):
         print(f"Total de registros procesados: {len(df_i)}")
         print(df_i.head())
     
-        print("transformando archivo y subiendo archivo...")        
+        print("transformando archivo...")        
         
         #revisar si archivo esta vacio si es asi, terminar proceso
         if df_i.empty:
@@ -109,6 +109,8 @@ async def combos_por_cliente_descarga(new_page,fecha_hoy):
         #agregar columna Fecha
         fecha_hoy_date = datetime.strptime(fecha_hoy, "%d-%m-%Y").date()
         df_i.insert(0, "Fecha", fecha_hoy_date)
+        #agregar columna de FechaCarga
+        df_i["FechaCarga"] = pd.Timestamp.now()
 
         dataframes.append(df_i)
 

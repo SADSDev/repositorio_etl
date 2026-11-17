@@ -10,8 +10,8 @@ import numpy as np
 #------------------------
 #IMPORTS
 #------------------------
-from core.subirDatosSQL import subir_datos_a_sql
-from configuraciones.parametros import (desde_agencia, hasta_agencia)
+from PowerStreet_ETL.diario.diarios_frecuentes.core.subirDatosSQL import subir_datos_a_sql
+from PowerStreet_ETL.configuraciones.parametros import (desde_agencia, hasta_agencia)
 #-----------------------------
 #PROCESO
 #-----------------------------
@@ -98,9 +98,10 @@ async def fullfillment_pedidos_descarga(new_page, fecha_hoy):
     df['Fecha'] = pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
     #reemplazar todos los "" con nan
     df = df.replace([""], np.nan)
+    df["FechaCarga"] = pd.Timestamp.now()
 
-    df_final=df
-    return df_final
+    
+    return df
 
 def fullfillment_pedidos_carga_sql(df: pd.DataFrame, schema:str, tabla:str)-> None:
     #subir datos a SQL server 

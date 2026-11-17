@@ -10,10 +10,10 @@ from playwright.async_api import Page
 #------------------------
 #IMPORTS
 #------------------------
-from configuraciones.parametros import agencias
+from PowerStreet_ETL.configuraciones.parametros import agencias
 
-from core.subirDatosSQL import subir_datos_a_sql
-from core.vaciarTablaSQL import vaciar_tabla_sql
+from PowerStreet_ETL.diario.diarios_por_dia.core.subirDatosSQL import subir_datos_a_sql
+from PowerStreet_ETL.diario.diarios_por_dia.core.vaciarTablaSQL import vaciar_tabla_sql
 
 
 #-----------------

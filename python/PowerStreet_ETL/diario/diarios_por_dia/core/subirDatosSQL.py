@@ -10,7 +10,7 @@ import pandas as pd
 #--------------------------
 #IMPORTS
 #-------------------------
-from configuraciones.conexion_sql import motor
+from PowerStreet_ETL.configuraciones.conexion_sql import motor
 
 #--------------------------------------------
 #Proceso de subida de datos

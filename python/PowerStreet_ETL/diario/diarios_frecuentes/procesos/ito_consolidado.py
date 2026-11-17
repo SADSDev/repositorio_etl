@@ -9,8 +9,8 @@ from sqlalchemy import text
 #------------------------
 #IMPORTS
 #------------------------
-from core.subirDatosSQL import subir_datos_a_sql
-from configuraciones.parametros import (desde_agencia, hasta_agencia)
+from PowerStreet_ETL.diario.diarios_frecuentes.core.subirDatosSQL import subir_datos_a_sql
+from PowerStreet_ETL.configuraciones.parametros import (desde_agencia, hasta_agencia)
 
 #-----------------------------
 #PROCESO
@@ -109,11 +109,13 @@ async def ito_consolidado_descarga(new_page, fecha_hoy):
     indice_agencia= columnas.index('Agencia')
     columnas.insert(indice_agencia + 1,columnas.pop(columnas.index('Fecha')))
     df=df[columnas]
+    #agregar columna de FechaCarga
+    df["FechaCarga"] = pd.Timestamp.now()
     #pasar columnas pct´s a formato de decimal (divdir entre 100)
     cols_pct = [col for col in df.columns if "Pct_" in col]
     df[cols_pct]=df[cols_pct]/100
 
-    df_final=df
+    
     return df
 
 def ito_consolidado_carga_sql(df: pd.DataFrame, schema:str, tabla:str)-> None:

@@ -10,9 +10,9 @@ from sqlalchemy import text
 #------------------------
 #IMPORTS
 #------------------------
-from configuraciones.conexion_sql import motor
+from PowerStreet_ETL.configuraciones.conexion_sql import motor
 
-from core.subirDatosSQL import subir_datos_a_sql
+from PowerStreet_ETL.diario.diarios_frecuentes.core.subirDatosSQL import subir_datos_a_sql
 
 #-----------------
 #proceso de reportes de venta diaria
@@ -92,9 +92,10 @@ async def ventas_descarga(new_page, fecha_hoy):
     #redondear datos numericos
     df["Cantidad"]=df["Cantidad"].round(3)
     df["Total"]=df["Total"].round(3)
+    #agregar columna de FechaCarga
+    df["FechaCarga"] = pd.Timestamp.now()
 
-    df_final=df
-    return df_final
+    return df
     
 def ventas_carga_sql(df: pd.DataFrame, schema:str, tabla:str)-> None:
     #subir datos a SQL server 

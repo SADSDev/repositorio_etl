@@ -10,8 +10,8 @@ import numpy as np
 #------------------------
 #IMPORTS
 #------------------------
-from core.subirDatosSQL import subir_datos_a_sql
-from configuraciones.parametros import (desde_agencia, hasta_agencia)
+from PowerStreet_ETL.diario.diarios_frecuentes.core.subirDatosSQL import subir_datos_a_sql
+from PowerStreet_ETL.configuraciones.parametros import (desde_agencia, hasta_agencia)
 #-----------------------------
 #PROCESO
 #-----------------------------
@@ -107,13 +107,15 @@ async def encuestas_supervisor_descarga(new_page, fecha_hoy):
     #TRANSFORMACIÓN DEL DF
     #llenar la columna fecha con la fecha de hoy
     df['Fecha'] = pd.to_datetime(fecha_hoy, dayfirst=True, errors='coerce')
+    #agregar columna de FechaCarga
+    df["FechaCarga"] = pd.Timestamp.now()
     #relllenar caracteres faltantes de codigo de cliente con 0
     df["Codigo"] = df["Codigo"].astype(str).str.zfill(10)
     #Eliminar fila de TOTALES
     df = df[df["NUR"] != "TOTALES"].copy()
     #ordenar columnas y quitar columnas innecesarias
     df=df[["Fecha","Supervisor", "NUR", "Codigo", "Cliente",
-        "TipoVisita", "ConVendedor", "SinVendedor"
+        "TipoVisita", "ConVendedor", "SinVendedor", "FechaCarga"
     ]]
 
     return df
