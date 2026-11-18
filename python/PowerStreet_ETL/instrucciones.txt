@@ -12,14 +12,10 @@
    "ODBC Driver de SQL Server" esté instalado en Windows. Este componente también se instala de forma manual mediante: https://download.microsoft.com/download/d624e1c6-293b-4d6f-91b8-6e515a5d6a77/amd64/1033/msodbcsql.msi
 
 
-****INSTRUCCIONES DE INSTALACIÓN****
+****INSTRUCCIONES DE INSTALACIÓN DE PRIMERA VEZ****
 1.-Copiar la carpeta del proyecto en ubicación de preferencia
 
-2.-Abrir CMD o Powershell (de preferencia con permisos de administrador), activar .venv, escribir y ejecutar linea por linea:
-	2.1: Cd + "ruta de la ubicación de carpeta de set_up_primera_vez"
-	ejemplo: cd "C:\One_Drive_Edson\OneDrive - Universidad Autonoma de Nuevo León\EDSON\SODISA\Python\PowerStreet_ETL\set_up_primera_vez"
-
-	2.2: python set_up.py
+2.-Correr instalacion_requisitos.bat para instalar dependencias
 
 3.-Listo, ya puedes programar la tarea en Windows de los programas ETL para su ejecución diaria/mensual/semanal
 Los programas schedulables son aquellos de nomenclatura: "powerstreet_..."
