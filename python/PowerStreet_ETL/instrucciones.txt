@@ -15,7 +15,7 @@
 ****INSTRUCCIONES DE INSTALACIÓN DE PRIMERA VEZ****
 1.-Copiar la carpeta del proyecto en ubicación de preferencia
 
-2.-Correr instalacion_requisitos.bat para instalar dependencias
+2.-Correr instalacion_primera_vez.bat para instalar dependencias
 
 3.-Listo, ya puedes programar la tarea en Windows de los programas ETL para su ejecución diaria/mensual/semanal
 Los programas schedulables son aquellos de nomenclatura: "powerstreet_..."
