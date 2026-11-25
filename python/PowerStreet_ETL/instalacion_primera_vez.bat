@@ -8,14 +8,27 @@ echo =================================
 echo   CONFIGURACION DEL PROYECTO
 echo =================================
 
-if not exist "%ROOT%.venv\Scripts\python.exe" (
-    echo Creando entorno virtual...
-    python -m venv "%ROOT%.venv"
-
+if exist "%ROOT%.venv\" (
+    echo Eliminando el entorno virtual anterior...
+    rmdir /s /q "%ROOT%.venv"
+    
     if errorlevel 1 (
-        echo ERROR: No se pudo crear el entorno virtual.
+        echo ERROR: No se pudo eliminar el entorno anterior.
         exit /b 1
     )
+)
+
+echo Creando entorno virtual...
+python -m venv "%ROOT%.venv"
+
+if errorlevel 1 (
+    echo ERROR: No se pudo crear el entorno virtual.
+    exit /b 1
+)
+
+if not exist "%ROOT%.venv\Scripts\python.exe" (
+    echo ERROR: No se encontro Python dentro del entorno.
+    exit /b 1
 )
 
 echo Activando entorno virtual...
