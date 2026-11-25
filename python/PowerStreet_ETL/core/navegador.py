@@ -2,18 +2,17 @@
 #LIBRERIAS
 #---------------------
 import base64
-import cv2
 import numpy as np
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
-
-from paddleocr import PaddleOCR
+import ddddocr
 
 #--------------------------
 #IMPORTS
 #-------------------------
 from PowerStreet_ETL.configuraciones.parametros import (
     usuariops,
-    contraseñaps
+    contraseñaps,
+    urlpowerstreet
 )
 
 #--------------------------------
@@ -40,7 +39,7 @@ async def carga_pagina(p, headless=True):
         locale="es-MX",)
     page = await context.new_page()
 
-    await safe_goto(page, url="https://client.powerstreet.cloud")
+    await safe_goto(page, url=urlpowerstreet)
     await page.wait_for_load_state("networkidle", timeout=240000)
     print("Página cargada!!!")
 
@@ -62,7 +61,7 @@ async def carga_pagina(p, headless=True):
         )
         if await dialog.is_visible():
             print("CAPTCHA detectado, resolviendo...")
-            ocr = PaddleOCR(use_textline_orientation=False,lang='en')
+            ocr = ddddocr.DdddOcr(show_ad=False)#CREAR MODELO OCR
             while await dialog.is_visible():
                 print("resolviendo captcha")
                 image = await page.query_selector('#captcha-img')#selección de la imagen del captcha
@@ -83,37 +82,25 @@ async def carga_pagina(p, headless=True):
                             return canvas.toDataURL('image/png').split(',')[1];
                         }
                         """)
-                    img_bytes = base64.b64decode(img_base64)
-                    img_array = np.frombuffer(img_bytes, dtype=np.uint8)
-                    img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-                    if img is None:
-                        print("Imagen vacía")
+                    
+                    if not img_base64:
+                        print("La imagen del captcha llegó vacía, refrescando...")
+                        await page.locator('#btn-refresh-captcha').click()
+                        await page.wait_for_timeout(1000)
                         continue
-                    print("Captcha descargado correctamente")
-                    # limpieza de la imagen
-                    # Convierte la imagen a escala de grises
-                    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                    # Aplicar un umbral para obtener solo los tonos de negro (y gris)
-                    _, imagen_umbral = cv2.threshold(
-                        gray_img, 150, 255, cv2.THRESH_BINARY_INV)
-                    # Crear una imagen en blanco
-                    imagen_blanca = np.ones_like(img) * 255
-                    # Aplicar la máscara de umbral a la imagen original
-                    resultado = cv2.bitwise_and(img, img, mask=imagen_umbral)
-                    # Combinar la imagen original con la imagen en blanco usando la máscara inversa
-                    imagen_final = cv2.add(imagen_blanca, resultado, mask=cv2.bitwise_not(imagen_umbral))
-                    # Aumentar el contraste en un 300%
-                    alpha = 4.0  # Factor de contraste (1.0 + 3.0 = 4.0 para +300%)
-                    imagen_contraste = cv2.convertScaleAbs(imagen_final, alpha=alpha, beta=0)
-                    # Aumentar el brillo en un 150%
-                    beta = 150  # Valor de brillo (150 para +150%)
-                    imagen_brillo = cv2.convertScaleAbs(imagen_contraste, alpha=1.0, beta=beta)
-                    resultado = ocr.ocr(imagen_brillo)
-                    if resultado and resultado[0]: #SI EL RESULTADO NO ESTÁ VACIO
-                        captchaResult = "".join([linea[1][0] for linea in resultado[0]])
-                        print(captchaResult)
+                    print("Imagen descargada correctamente")
+                    
+                    # limpieza de la imagen-----------------------
+                    # ddddocr recibe bytes, no una ruta ni un arreglo de OpenCV.
+                    img_bytes = base64.b64decode(img_base64)
+                    resultadoCaptcha = ocr.classification(img_bytes).upper()
+                
+                
+                    #LLenar captcha    
+                    if resultadoCaptcha and resultadoCaptcha[0]: #SI EL RESULTADO NO ESTÁ VACIO
+                        print(resultadoCaptcha)
                         await page.locator('input[name="captcha-text"]').wait_for(state="visible",timeout=60000)
-                        await page.fill('input[name="captcha-text"]', captchaResult)
+                        await page.fill('input[name="captcha-text"]', resultadoCaptcha)
                         modal = page.locator('[role="dialog"]')#adecuar 
                         await modal.locator('button:has-text("Validar")').click()
                         await page.wait_for_timeout(1500)#esperar 1.5 segundos para que el programa alcanze a hacer la validacion del while    
